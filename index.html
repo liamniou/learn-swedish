@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Svenska — учим шведский</title>
+  <meta name="description" content="Карточки, тесты и правила для изучения шведского языка">
+  <meta name="theme-color" content="#005b99">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 10'%3E%3Crect width='16' height='10' fill='%23006aa7'/%3E%3Crect x='5' width='2' height='10' fill='%23fecc00'/%3E%3Crect y='4' width='16' height='2' fill='%23fecc00'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <a href="#/" class="logo"><span class="flag" aria-hidden="true"></span>Svenska</a>
+      <nav class="nav">
+        <a href="#/review" data-route="review">Повторение</a>
+        <a href="#/cards" data-route="cards">Карточки</a>
+        <a href="#/quiz" data-route="quiz">Тест</a>
+        <a href="#/type" data-route="type">Написание</a>
+      </nav>
+      <div class="filters">
+        <select id="lesson-filter" aria-label="Урок"></select>
+        <button id="dir-toggle" class="chip" title="Направление перевода"></button>
+      </div>
+    </div>
+  </header>
+  <main id="app" class="container"><p class="muted">Загрузка…</p></main>
+</body>
+</html>
