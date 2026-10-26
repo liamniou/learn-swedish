@@ -5,7 +5,7 @@ const DAY = 864e5;
 const INTERVALS = [0, 1, 3, 7, 14, 30, 60, 120];
 const LEARNED_BOX = 3;
 const SESSION_SIZE = 15;
-const KEYS = { progress: 'sv.progress.v1', settings: 'sv.settings.v1', daily: 'sv.daily.v1' };
+const KEYS = { progress: 'sv.progress.v1', settings: 'sv.settings.v1', daily: 'sv.daily.v1', pending: 'sv.pending.v1', resetAt: 'sv.resetAt.v1' };
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -19,7 +19,7 @@ const store = {
 let lessons = [];
 let cards = [];
 let progress = store.get(KEYS.progress, {});
-const settings = Object.assign({ dir: 'sv-ru', lesson: 'all', newPerDay: 20 }, store.get(KEYS.settings, {}));
+const settings = Object.assign({ dir: 'sv-ru', lesson: 'all', newPerDay: 20, newPerDayT: 0 }, store.get(KEYS.settings, {}));
 const saveSettings = () => store.set(KEYS.settings, settings);
 const saveProgress = () => store.set(KEYS.progress, progress);
 
@@ -41,7 +41,122 @@ function daily() {
   const d = store.get(KEYS.daily, {});
   return d.date === today() ? Object.assign({ newSeen: 0, extra: 0 }, d) : { date: today(), newSeen: 0, extra: 0 };
 }
-const saveDaily = d => store.set(KEYS.daily, d);
+const saveDaily = d => { store.set(KEYS.daily, d); sync.push(); };
+
+// ---------- Server sync ----------
+// localStorage is a cache; the server (/api/sync) is the source of truth.
+// Each progress entry carries a timestamp `t`; both sides keep the newest per card.
+const sync = {
+  status: 'idle', // idle | syncing | ok | offline | error
+  pending: new Set(store.get(KEYS.pending, [])),
+  timer: null,
+  inflight: null,
+
+  mark(key) {
+    this.pending.add(key);
+    store.set(KEYS.pending, [...this.pending]);
+    this.push();
+  },
+
+  push(delay = 400) {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.run(), delay);
+  },
+
+  async run({ full = false } = {}) {
+    if (this.inflight) { await this.inflight; if (!full && !this.pending.size) return; }
+    this.inflight = this._run(full).finally(() => { this.inflight = null; });
+    return this.inflight;
+  },
+
+  async _run(full) {
+    const keys = full ? Object.keys(progress) : [...this.pending];
+    const body = {
+      progress: Object.fromEntries(keys.filter(k => progress[k]).map(k => [k, progress[k]])),
+      daily: daily(),
+      settings: { newPerDay: settings.newPerDay, t: settings.newPerDayT },
+    };
+    this.setStatus('syncing');
+    try {
+      const r = await fetch('api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const server = await r.json();
+      keys.forEach(k => this.pending.delete(k));
+      store.set(KEYS.pending, [...this.pending]);
+      this.apply(server);
+      this.setStatus(this.pending.size ? 'syncing' : 'ok');
+      if (this.pending.size) this.push(0);
+      return true;
+    } catch (err) {
+      console.warn('sync failed', err);
+      this.setStatus(navigator.onLine === false || err instanceof TypeError ? 'offline' : 'error');
+      this.push(30000);
+      return false;
+    }
+  },
+
+  // Adopt server state, keeping local entries that are newer or not yet pushed.
+  apply(server) {
+    if (server.resetAt > store.get(KEYS.resetAt, 0)) {
+      for (const [k, p] of Object.entries(progress)) if ((p.t || 0) <= server.resetAt) delete progress[k];
+      store.set(KEYS.resetAt, server.resetAt);
+    }
+    const merged = { ...server.progress };
+    for (const [k, p] of Object.entries(progress)) {
+      if (!merged[k] || (p.t || 0) > (merged[k].t || 0)) merged[k] = p;
+    }
+    progress = merged;
+    saveProgress();
+    const sd = server.daily || {};
+    if (sd.date === today()) {
+      const d = daily();
+      store.set(KEYS.daily, { date: sd.date, newSeen: Math.max(d.newSeen, sd.newSeen || 0), extra: Math.max(d.extra, sd.extra || 0) });
+    }
+    const ss = server.settings || {};
+    if ((ss.t || 0) > settings.newPerDayT) {
+      settings.newPerDay = ss.newPerDay;
+      settings.newPerDayT = ss.t;
+      saveSettings();
+    }
+  },
+
+  async replace(data) {
+    const r = await fetch('api/state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const server = await r.json();
+    progress = {};
+    this.pending.clear();
+    store.set(KEYS.pending, []);
+    localStorage.removeItem(KEYS.daily);
+    this.apply(server);
+  },
+
+  setStatus(s) {
+    this.status = s;
+    const el = $('#sync');
+    if (!el) return;
+    const map = {
+      idle: ['', ''],
+      syncing: ['⟳', 'Синхронизация…'],
+      ok: ['☁︎', 'Прогресс сохранён на сервере'],
+      offline: ['⚠︎', 'Нет связи с сервером — прогресс сохранён локально и будет отправлен позже'],
+      error: ['⚠︎', 'Ошибка синхронизации — прогресс сохранён локально'],
+    };
+    el.textContent = map[s][0];
+    el.title = map[s][1];
+    el.dataset.state = s;
+  },
+};
+
+window.addEventListener('online', () => sync.push(0));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') sync.run().then(ok => ok && refreshIdle());
+});
+// Re-render passive pages after a background sync brought in changes from another device.
+function refreshIdle() {
+  const name = location.hash.replace(/^#\/?/, '').split('/')[0];
+  if (name === '' || name === 'lesson') route();
+}
 
 const pk = (c, dir = settings.dir) => `${c.id}|${dir}`;
 const prog = c => progress[pk(c)];
@@ -113,8 +228,10 @@ function grade(c, g) {
   }
   if (g === 0) { p.box = 0; p.due = Date.now(); p.wrong++; }
   else { p.box = Math.min(p.box + g, INTERVALS.length - 1); p.due = Date.now() + INTERVALS[p.box] * DAY; p.right++; }
+  p.t = Date.now();
   progress[key] = p;
   saveProgress();
+  sync.mark(key);
 }
 
 function intervalLabel(c, g) {
@@ -224,16 +341,17 @@ function home() {
           <span class="spacer"></span>
           <button class="btn danger" id="reset">Сбросить прогресс</button>
         </div>
-        <div class="small muted">Прогресс хранится в этом браузере. Экспорт/импорт позволяет перенести его на другое устройство.</div>
+        <div class="small muted">Прогресс хранится на сервере и синхронизируется между устройствами. Экспорт — резервная копия в файл.</div>
       </div>
     </details>`;
 
   $('#new-per-day').onchange = e => {
     settings.newPerDay = Math.max(1, Math.min(200, parseInt(e.target.value, 10) || 20));
-    saveSettings(); home();
+    settings.newPerDayT = Date.now();
+    saveSettings(); sync.push(0); home();
   };
   $('#export').onclick = () => {
-    const blob = new Blob([JSON.stringify({ progress, settings, daily: daily() }, null, 1)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ progress, settings: { newPerDay: settings.newPerDay }, daily: daily() }, null, 1)], { type: 'application/json' });
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `svenska-progress-${today()}.json` });
     a.click(); URL.revokeObjectURL(a.href);
   };
@@ -241,14 +359,15 @@ function home() {
     try {
       const data = JSON.parse(await e.target.files[0].text());
       if (!data.progress) throw new Error('нет поля progress');
-      progress = data.progress; saveProgress();
-      if (data.daily) saveDaily(data.daily);
+      if (!confirm('Заменить текущий прогресс на всех устройствах данными из файла?')) return;
+      await sync.replace(data);
       alert('Прогресс импортирован'); home();
     } catch (err) { alert('Не удалось импортировать: ' + err.message); }
   };
-  $('#reset').onclick = () => {
-    if (!confirm('Сбросить весь прогресс? Это нельзя отменить.')) return;
-    progress = {}; saveProgress(); localStorage.removeItem(KEYS.daily); home();
+  $('#reset').onclick = async () => {
+    if (!confirm('Сбросить весь прогресс на всех устройствах? Это нельзя отменить.')) return;
+    try { await sync.replace({ progress: {} }); home(); }
+    catch (err) { alert('Не удалось сбросить: ' + err.message); }
   };
 }
 
@@ -642,12 +761,16 @@ document.addEventListener('keydown', e => {
     await load();
   } catch (err) {
     app.innerHTML = `<div class="panel"><h2>Не удалось загрузить уроки</h2><p class="muted">${esc(err.message)}</p>
-      <p class="small muted">Если сайт открыт как файл, запустите локальный сервер: <code>python3 -m http.server</code></p></div>`;
+      <p class="small muted">Локально запустите сервер: <code>node server/server.mjs</code></p></div>`;
     return;
   }
   syncHeader();
   $('#lesson-filter').onchange = e => { settings.lesson = e.target.value; saveSettings(); route(); };
   $('#dir-toggle').onclick = () => { settings.dir = svFirst() ? 'ru-sv' : 'sv-ru'; saveSettings(); syncHeader(); route(); };
   window.addEventListener('hashchange', route);
+  // Wait briefly for server progress so the first screen shows the right counts.
+  const first = sync.run({ full: true });
+  const settled = await Promise.race([first.then(() => true), new Promise(r => setTimeout(r, 2500, false))]);
   route();
+  if (!settled) first.then(ok => ok && refreshIdle());
 })();

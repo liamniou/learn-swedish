@@ -6,9 +6,12 @@ The user sends homework (links, PDFs, screenshots) about twice a week. Each home
 2. Add `lesson.json` (format below) and, if there's theory, a `notes.html` fragment.
 3. Append the folder name to `lessons/index.json`.
 4. Run `node scripts/validate.mjs`. It must pass.
-5. Commit and push to `main`. GitHub Pages deploys automatically.
+5. Commit and push to `main`. The *Build and publish image* workflow publishes `ghcr.io/liamniou/learn-swedish:YYYY.M.D.<run>`. Get the tag and digest from the run summary, or with `gh run view --log | grep -o 'learn-swedish:[0-9.]*@sha256:[0-9a-f]*'`.
+6. Deploy: in `~/git/gitops` (`liamniou/gitops`), `git pull`, set that `image:` tag@digest in `eva00/learn-swedish/compose.yaml`, then commit (`learn-swedish: <tag>`) and push to `main`. doco-cd on eva00 redeploys within about 60 seconds. Verify with `curl http://192.168.0.237:7480/lessons/index.json`.
 
 Never rename an existing lesson folder or change an existing word's `sv` value. Progress is keyed by `lessonId/sv`, so a rename resets that word's progress.
+
+Progress is stored server-side (`/api/sync`). Don't change the progress key format or the entry shape (`box`, `due`, `right`, `wrong`, `t`) without migrating `/home/lestar/_volumes/learn-swedish/data/state.json`.
 
 ## lesson.json
 

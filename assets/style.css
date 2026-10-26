@@ -84,7 +84,12 @@ h3 { font-size: 1.05rem; margin: 1.4em 0 .5em; }
 }
 .nav a:hover { background: var(--soft); color: var(--text); }
 .nav a.active { background: var(--soft); color: var(--text); font-weight: 600; }
-.filters { display: flex; gap: 8px; }
+.filters { display: flex; gap: 8px; align-items: center; }
+.sync { font-size: 1.05rem; min-width: 1.2em; text-align: center; color: var(--muted); cursor: help; }
+.sync[data-state="ok"] { color: var(--good); }
+.sync[data-state="offline"], .sync[data-state="error"] { color: var(--almost); }
+.sync[data-state="syncing"] { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 select, input[type="text"], input[type="search"], input[type="number"] {
   font: inherit; color: var(--text); background: var(--card);
   border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px;

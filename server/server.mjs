@@ -1,0 +1,188 @@
+// Static file server + progress sync API for the Swedish portal. No dependencies.
+import { createServer } from 'node:http';
+import { readFile, writeFile, rename, mkdir, readdir, unlink, stat } from 'node:fs/promises';
+import { join, normalize, extname, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = resolve(process.env.PUBLIC_DIR || join(dirname(fileURLToPath(import.meta.url)), '..'));
+const DATA_DIR = resolve(process.env.DATA_DIR || join(ROOT, 'data'));
+const STATE_FILE = join(DATA_DIR, 'state.json');
+const PORT = Number(process.env.PORT || 8080);
+const KEEP_SNAPSHOTS = 30;
+const MAX_BODY = 2 * 1024 * 1024;
+const PUBLIC_PATHS = ['/index.html', '/assets/', '/lessons/'];
+
+const TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon',
+};
+
+const emptyState = () => ({ version: 1, resetAt: 0, updatedAt: 0, progress: {}, daily: {}, settings: {} });
+let state = emptyState();
+
+async function loadState() {
+  try {
+    state = { ...emptyState(), ...JSON.parse(await readFile(STATE_FILE, 'utf8')) };
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err;
+  }
+}
+
+// Writes are serialized so concurrent requests can't interleave tmp/rename.
+let writeChain = Promise.resolve();
+function persist() {
+  writeChain = writeChain.catch(() => {}).then(async () => {
+    await mkdir(DATA_DIR, { recursive: true });
+    const body = JSON.stringify(state);
+    const tmp = `${STATE_FILE}.tmp`;
+    await writeFile(tmp, body);
+    await rename(tmp, STATE_FILE);
+    await snapshot(body);
+  });
+  return writeChain;
+}
+
+async function snapshot(body) {
+  await writeFile(join(DATA_DIR, `state-${new Date().toISOString().slice(0, 10)}.json`), body);
+  const old = (await readdir(DATA_DIR)).filter(f => /^state-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().slice(0, -KEEP_SNAPSHOTS);
+  await Promise.all(old.map(f => unlink(join(DATA_DIR, f))));
+}
+
+const num = v => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
+function cleanEntry(p) {
+  if (!p || typeof p !== 'object') return null;
+  return { box: num(p.box), due: num(p.due), right: num(p.right), wrong: num(p.wrong), t: num(p.t) };
+}
+
+// Last-write-wins per card; entries written before the last reset are dropped.
+function mergeProgress(incoming) {
+  let changed = false;
+  if (!incoming || typeof incoming !== 'object') return false;
+  for (const [key, raw] of Object.entries(incoming)) {
+    if (key.length > 300) continue;
+    const p = cleanEntry(raw);
+    if (!p || p.t <= state.resetAt) continue;
+    const cur = state.progress[key];
+    if (!cur || p.t > num(cur.t)) { state.progress[key] = p; changed = true; }
+  }
+  return changed;
+}
+
+function mergeDaily(d) {
+  if (!d || typeof d.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.date)) return false;
+  const cur = state.daily;
+  if (!cur.date || d.date > cur.date) {
+    state.daily = { date: d.date, newSeen: num(d.newSeen), extra: num(d.extra) };
+    return true;
+  }
+  if (d.date === cur.date) {
+    const next = { date: d.date, newSeen: Math.max(num(cur.newSeen), num(d.newSeen)), extra: Math.max(num(cur.extra), num(d.extra)) };
+    if (next.newSeen !== cur.newSeen || next.extra !== cur.extra) { state.daily = next; return true; }
+  }
+  return false;
+}
+
+function mergeSettings(s) {
+  if (!s || typeof s !== 'object' || num(s.t) <= num(state.settings.t)) return false;
+  state.settings = { newPerDay: Math.max(1, Math.min(200, num(s.newPerDay) || 20)), t: num(s.t) };
+  return true;
+}
+
+function send(res, code, body) {
+  const isText = typeof body === 'string';
+  res.writeHead(code, {
+    'Content-Type': isText ? 'text/plain; charset=utf-8' : TYPES['.json'],
+    'Cache-Control': 'no-store',
+  });
+  res.end(isText ? body : JSON.stringify(body));
+}
+
+async function readBody(req) {
+  const chunks = [];
+  let size = 0;
+  for await (const c of req) {
+    size += c.length;
+    if (size > MAX_BODY) throw Object.assign(new Error('body too large'), { status: 413 });
+    chunks.push(c);
+  }
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); }
+  catch { throw Object.assign(new Error('invalid JSON'), { status: 400 }); }
+}
+
+async function handleApi(req, res, path) {
+  if (path === '/api/health') return send(res, 200, { ok: true });
+
+  if (path === '/api/state' && req.method === 'GET') return send(res, 200, state);
+
+  if (path === '/api/sync' && req.method === 'POST') {
+    const body = await readBody(req);
+    const changed = [mergeProgress(body.progress), mergeDaily(body.daily), mergeSettings(body.settings)].some(Boolean);
+    if (changed) { state.updatedAt = Date.now(); await persist(); }
+    return send(res, 200, state);
+  }
+
+  // Replace everything: import from file, or reset (empty progress).
+  if (path === '/api/state' && req.method === 'PUT') {
+    const body = await readBody(req);
+    const now = Date.now();
+    state = { ...emptyState(), resetAt: now, updatedAt: now };
+    const progress = Object.fromEntries(Object.entries(body.progress || {}).map(([k, p]) => [k, { ...p, t: now + 1 }]));
+    mergeProgress(progress);
+    mergeDaily(body.daily);
+    if (body.settings) mergeSettings({ ...body.settings, t: now });
+    await persist();
+    return send(res, 200, state);
+  }
+
+  send(res, 404, { error: 'not found' });
+}
+
+async function serveStatic(req, res, path) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
+  if (path === '/') path = '/index.html';
+  const rel = normalize(path);
+  if (!PUBLIC_PATHS.some(p => rel === p || (p.endsWith('/') && rel.startsWith(p)))) return send(res, 404, 'Not found');
+  const file = join(ROOT, rel);
+  if (!file.startsWith(ROOT + '/')) return send(res, 404, 'Not found');
+  try {
+    const st = await stat(file);
+    if (!st.isFile()) return send(res, 404, 'Not found');
+    res.writeHead(200, {
+      'Content-Type': TYPES[extname(file)] || 'application/octet-stream',
+      'Content-Length': st.size,
+      'Cache-Control': 'no-cache',
+    });
+    if (req.method === 'HEAD') return res.end();
+    res.end(await readFile(file));
+  } catch {
+    send(res, 404, 'Not found');
+  }
+}
+
+const server = createServer(async (req, res) => {
+  let path;
+  try { path = decodeURIComponent(new URL(req.url, 'http://x').pathname); }
+  catch { return send(res, 400, 'Bad request'); }
+  try {
+    if (path.startsWith('/api/')) await handleApi(req, res, path);
+    else await serveStatic(req, res, path);
+  } catch (err) {
+    console.error(req.method, path, err);
+    if (!res.headersSent) send(res, err.status || 500, { error: err.status ? err.message : 'internal error' });
+  }
+});
+
+await loadState();
+server.listen(PORT, () => console.log(`learn-swedish on :${PORT}, data in ${DATA_DIR}, ${Object.keys(state.progress).length} progress entries`));
+
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => server.close(() => writeChain.finally(() => process.exit(0))));
+}
