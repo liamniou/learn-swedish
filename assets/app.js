@@ -375,15 +375,19 @@ async function lessonPage(id) {
   const l = lessons.find(x => x.id === id);
   if (!l) return emptyState('🤷', 'Урок не найден', '', '<a class="btn" href="#/">На главную</a>');
   const lessonCards = cards.filter(c => c.lessonId === id);
-  const hasDrills = l.drills?.some(d => d.items.length);
   app.innerHTML = `
     <a class="back" href="#/">← Все уроки</a>
     <h1>${esc(l.title)}</h1>
     <div class="muted">${l.titleSv ? `<span lang="sv">${esc(l.titleSv)}</span> · ` : ''}${fmtDate(l.date)} · ${words(lessonCards.length)}</div>
     ${l.summary ? `<p>${esc(l.summary)}</p>` : ''}
+    ${l.listen?.length ? `<div class="listen">
+      <b>🎧 Слушать</b>
+      ${l.listen.map(a => `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.label)} ↗</a>`).join('')}
+      ${l.listenNote ? `<div class="small muted">${esc(l.listenNote)}</div>` : ''}
+    </div>` : ''}
     <div class="row" style="margin-top:14px">
       <button class="btn primary" id="study">Учить слова урока</button>
-      ${hasDrills ? `<a class="btn" href="#/drill/${esc(id)}">🗣 Тренажёр: как читается?</a>` : ''}
+      ${(l.drills || []).map((d, i) => d.items.length ? `<a class="btn" href="#/drill/${esc(id)}/${i}">🎯 ${esc(d.title)}</a>` : '').join('')}
     </div>
     <div class="tabs">
       ${l.notes ? '<button data-tab="notes">Теория</button>' : ''}
@@ -610,11 +614,14 @@ function quizPage() {
   runChoice({ items, restart: quizPage });
 }
 
-function drillPage(id) {
+function drillPage(id, idx) {
   const l = lessons.find(x => x.id === id);
-  const all = (l?.drills || []).flatMap(d => d.items.map(it => ({ ...it, group: d.title })));
+  const drills = (l?.drills || []).filter((d, i) => idx === undefined || i === +idx);
+  const all = drills.flatMap(d => d.items.map(it => ({ ...it, group: d.title })));
   if (!all.length) return emptyState('🤷', 'Нет упражнений', '', '<a class="btn" href="#/">На главную</a>');
-  const items = shuffle(all).map(it => {
+  // Drills that follow an audio track keep their original order.
+  const ordered = drills.length === 1 && drills[0].ordered;
+  const items = (ordered ? all : shuffle(all)).map(it => {
     const idx = it.word.indexOf(it.focus);
     const promptHTML = idx < 0 ? esc(it.word)
       : `${esc(it.word.slice(0, idx))}<mark>${esc(it.focus)}</mark>${esc(it.word.slice(idx + it.focus.length))}`;
@@ -629,7 +636,7 @@ function drillPage(id) {
       reviewHTML: `<b lang="sv">${esc(it.word)}</b>: <b>${esc(it.focus)}</b> → ${esc(it.answer)}${it.why ? ` <span class="muted">(${esc(it.why)})</span>` : ''}`,
     };
   });
-  runChoice({ items, restart: () => drillPage(id) });
+  runChoice({ items, restart: () => drillPage(id, idx) });
 }
 
 // Typing: compare ignoring case, punctuation and articles; flag missing å/ä/ö and wrong en/ett.
@@ -734,9 +741,9 @@ const routes = { '': home, lesson: lessonPage, cards: cardsPage, review: reviewP
 
 function route() {
   onKey = null;
-  const [name = '', arg] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+  const [name = '', ...args] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   $$('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === name));
-  (routes[name] || home)(arg);
+  (routes[name] || home)(...args);
   window.scrollTo(0, 0);
 }
 

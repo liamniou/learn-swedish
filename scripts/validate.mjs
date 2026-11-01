@@ -25,6 +25,7 @@ for (const id of index.lessons) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(l.date || '')) err(id, 'date must be YYYY-MM-DD');
   if (l.notes && !existsSync(join(dir, l.notes))) err(id, `notes file not found: ${l.notes}`);
   if (!Array.isArray(l.sections) || !l.sections.length) err(id, 'needs at least one section');
+  for (const a of l.listen || []) if (!a.label || !/^https?:\/\//.test(a.url || '')) err(id, `listen entry needs label and http(s) url: ${JSON.stringify(a)}`);
 
   const seen = new Set();
   for (const [si, s] of (l.sections || []).entries()) {

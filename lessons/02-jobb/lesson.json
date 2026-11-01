@@ -1,0 +1,434 @@
+{
+  "title": "Кем ты работаешь? Местоимения",
+  "titleSv": "Vad jobbar du med?",
+  "date": "2026-11-01",
+  "summary": "Rivstart A1+A2, глава 1, стр. 11–13: личные местоимения, профессии, как рассказать, чем ты занимаешься, и упражнение на аудирование H.",
+  "notes": "notes.html",
+  "listen": [
+    {
+      "label": "Kapitel 1 — аудио, трек 3 (упр. H)",
+      "url": "https://digi.nokportalen.se/contents/be3ec0dd-410b-47fd-b273-00e47712d3e0?close_url=/areas/5b5f7bdf-516f-480f-9a17-8311c5ff49aa"
+    },
+    {
+      "label": "Цифровая книга Rivstart",
+      "url": "https://digi.nokportalen.se/books/d5528a43-29db-4d4b-bef4-127493fa703f?statisticsIsbn=9789127482487"
+    }
+  ],
+  "listenNote": "Нужен вход в NoK-портал. Включите трек 3, затем пройдите «Упр. H: Varifrån kommer de?» — вопросы идут в порядке записи.",
+  "sources": [
+    {
+      "label": "Rivstart A1+A2 Textbok (Natur & Kultur), стр. 11–13"
+    },
+    {
+      "label": "Список слов из домашнего задания"
+    }
+  ],
+  "sections": [
+    {
+      "title": "Слова",
+      "words": [
+        {
+          "sv": "Vad jobbar du med?",
+          "ru": "Кем ты работаешь? Чем ты занимаешься?",
+          "hint": "дословно: «с чем ты работаешь?»; предлог med в конце",
+          "ex": "– Vad jobbar du med? – Jag är lärare.",
+          "exRu": "— Кем ты работаешь? — Я учитель."
+        },
+        {
+          "sv": "du då?",
+          "ru": "а ты? а у тебя?",
+          "hint": "возвращает вопрос собеседнику",
+          "ex": "Jag heter Anna. Du då?",
+          "exRu": "Меня зовут Анна. А тебя?"
+        },
+        {
+          "sv": "en läkare",
+          "ru": "врач",
+          "hint": "k + ä → [щ]: «лэщаре»",
+          "ex": "Min mamma är läkare.",
+          "exRu": "Моя мама — врач."
+        },
+        {
+          "sv": "en tand",
+          "ru": "зуб",
+          "hint": "мн. ч. tänder",
+          "ex": "Jag har ont i en tand.",
+          "exRu": "У меня болит зуб."
+        },
+        {
+          "sv": "en tandläkare",
+          "ru": "стоматолог, зубной врач",
+          "hint": "tand + läkare = «зубной врач»",
+          "ex": "Jag ska gå till tandläkaren i morgon.",
+          "exRu": "Завтра я пойду к стоматологу."
+        },
+        {
+          "sv": "sjuk",
+          "ru": "больной",
+          "hint": "sj → [ɧ]",
+          "ex": "Jag är sjuk i dag.",
+          "exRu": "Сегодня я болею."
+        },
+        {
+          "sv": "en sjuksköterska",
+          "ru": "медсестра, медбрат",
+          "hint": "sj → [ɧ], sk + ö → [ɧ], rs → [ш]: «ɧюкɧётешка»",
+          "ex": "Hon är sjuksköterska på ett sjukhus.",
+          "exRu": "Она медсестра в больнице."
+        },
+        {
+          "sv": "en lärare",
+          "ru": "учитель, преподаватель",
+          "hint": "мн. ч. тоже lärare",
+          "ex": "Vår lärare heter Eva.",
+          "exRu": "Нашу учительницу зовут Эва."
+        },
+        {
+          "sv": "en servitör",
+          "ru": "официант",
+          "hint": "ударение на последний слог: «сервитёр»",
+          "ex": "Han jobbar som servitör på en restaurang.",
+          "exRu": "Он работает официантом в ресторане."
+        },
+        {
+          "sv": "att plugga",
+          "ru": "учиться (разг.)",
+          "hint": "jag pluggar — я учусь",
+          "ex": "Jag pluggar svenska varje dag.",
+          "exRu": "Я учу шведский каждый день."
+        },
+        {
+          "sv": "att förstå",
+          "ru": "понимать",
+          "hint": "jag förstår — я понимаю; å → [о]",
+          "ex": "Förlåt, jag förstår inte.",
+          "exRu": "Извините, я не понимаю."
+        },
+        {
+          "sv": "med",
+          "ru": "с, вместе с",
+          "ex": "Jag pratar svenska med min lärare.",
+          "exRu": "Я говорю по-шведски со своим учителем."
+        },
+        {
+          "sv": "men",
+          "ru": "но",
+          "ex": "Jag förstår svenska, men jag pratar inte så bra.",
+          "exRu": "Я понимаю по-шведски, но говорю не очень хорошо."
+        }
+      ]
+    },
+    {
+      "title": "Личные местоимения (стр. 11)",
+      "note": "jag уже есть в уроке «Правила чтения».",
+      "words": [
+        {
+          "sv": "du",
+          "ru": "ты",
+          "ex": "Vad heter du?",
+          "exRu": "Как тебя зовут?"
+        },
+        {
+          "sv": "han",
+          "ru": "он",
+          "ex": "Han heter Philip.",
+          "exRu": "Его зовут Филип."
+        },
+        {
+          "sv": "hon",
+          "ru": "она",
+          "hint": "o краткое → [о]: «хон»",
+          "ex": "Hon kommer från Iran.",
+          "exRu": "Она из Ирана."
+        },
+        {
+          "sv": "hen",
+          "ru": "он/она (нейтральное)",
+          "hint": "когда пол неизвестен или неважен",
+          "ex": "Någon ringde, men hen sa inte sitt namn.",
+          "exRu": "Кто-то звонил, но не назвал своё имя."
+        },
+        {
+          "sv": "den",
+          "ru": "он/она/оно (о предмете, en-слово)",
+          "hint": "en bok → den",
+          "ex": "Var är boken? Den är här.",
+          "exRu": "Где книга? Она здесь."
+        },
+        {
+          "sv": "det",
+          "ru": "оно, это (ett-слово)",
+          "hint": "ett hus → det; в речи «де»",
+          "ex": "Var är kortet? Det är här.",
+          "exRu": "Где карточка? Она здесь."
+        },
+        {
+          "sv": "vi",
+          "ru": "мы",
+          "ex": "Vi pluggar svenska.",
+          "exRu": "Мы учим шведский."
+        },
+        {
+          "sv": "ni",
+          "ru": "вы (несколько человек)",
+          "ex": "Varifrån kommer ni?",
+          "exRu": "Откуда вы?"
+        },
+        {
+          "sv": "de",
+          "ru": "они",
+          "hint": "читается «дом»!",
+          "ex": "De talar spanska.",
+          "exRu": "Они говорят по-испански."
+        }
+      ]
+    }
+  ],
+  "drills": [
+    {
+      "title": "Упр. H: Varifrån kommer de?",
+      "ordered": true,
+      "items": [
+        {
+          "word": "Ravi kommer från ___.",
+          "focus": "___",
+          "ru": "Откуда Ravi?",
+          "answer": "Indien",
+          "options": [
+            "Indien",
+            "Iran",
+            "Irland",
+            "Island"
+          ],
+          "why": "Рави: «Jag bor i Stockholm, men jag kommer från Indien»."
+        },
+        {
+          "word": "Han talar ___.",
+          "focus": "___",
+          "ru": "На каких языках говорит Ravi?",
+          "answer": "engelska, hindi och svenska",
+          "options": [
+            "engelska, hindi och svenska",
+            "engelska, franska och svenska",
+            "engelska, italienska, japanska och svenska",
+            "polska, svenska och koreanska"
+          ],
+          "why": "На работе — английский, дома — хинди, и немного шведский."
+        },
+        {
+          "word": "Kicki kommer från ___.",
+          "focus": "___",
+          "ru": "Откуда Kicki?",
+          "answer": "Sverige (Malmö)",
+          "options": [
+            "Sverige (Malmö)",
+            "Schweiz",
+            "Finland",
+            "Norge"
+          ],
+          "why": "Кикки из Мальмё, на юге Швеции."
+        },
+        {
+          "word": "Hon talar ___.",
+          "focus": "___",
+          "ru": "На каких языках говорит Kicki?",
+          "answer": "engelska, franska och svenska",
+          "options": [
+            "engelska, hindi och svenska",
+            "engelska, franska och svenska",
+            "engelska, italienska, japanska och svenska",
+            "polska, svenska och koreanska"
+          ],
+          "why": "Английский и французский. «Och svenska såklart» — и шведский, конечно."
+        },
+        {
+          "word": "Tom kommer från ___.",
+          "focus": "___",
+          "ru": "Откуда Tom?",
+          "answer": "Australien",
+          "options": [
+            "Australien",
+            "Österrike",
+            "Kanada",
+            "England"
+          ],
+          "why": "Australien — Австралия; Österrike — Австрия."
+        },
+        {
+          "word": "Han talar ___.",
+          "focus": "___",
+          "ru": "На каких языках говорит Tom?",
+          "answer": "engelska, italienska, japanska och svenska",
+          "options": [
+            "engelska, hindi och svenska",
+            "engelska, franska och svenska",
+            "engelska, italienska, japanska och svenska",
+            "polska, svenska och koreanska"
+          ],
+          "why": "С партнёром говорит по-шведски, плюс английский, итальянский и чуть-чуть японский."
+        },
+        {
+          "word": "Agata kommer från ___.",
+          "focus": "___",
+          "ru": "Откуда Agata?",
+          "answer": "Polen",
+          "options": [
+            "Polen",
+            "Portugal",
+            "Tjeckien",
+            "Ungern"
+          ],
+          "why": "Агата из Польши, поэтому говорит по-польски."
+        },
+        {
+          "word": "Hon talar ___.",
+          "focus": "___",
+          "ru": "На каких языках говорит Agata?",
+          "answer": "polska, svenska och koreanska",
+          "options": [
+            "engelska, hindi och svenska",
+            "engelska, franska och svenska",
+            "engelska, italienska, japanska och svenska",
+            "polska, svenska och koreanska"
+          ],
+          "why": "Польский, шведский (учит в университете) и немного корейский — работала в Южной Корее."
+        }
+      ]
+    },
+    {
+      "title": "Какое местоимение?",
+      "items": [
+        {
+          "word": "___ heter Shirin.",
+          "focus": "___",
+          "ru": "Её зовут Ширин.",
+          "answer": "Hon",
+          "options": [
+            "Hon",
+            "Han",
+            "Hen",
+            "Den"
+          ],
+          "why": "она → hon"
+        },
+        {
+          "word": "___ kommer från Kanada.",
+          "focus": "___",
+          "ru": "Он из Канады.",
+          "answer": "Han",
+          "options": [
+            "Han",
+            "Hon",
+            "Den",
+            "Det"
+          ],
+          "why": "он (человек) → han"
+        },
+        {
+          "word": "___ pluggar svenska.",
+          "focus": "___",
+          "ru": "Мы учим шведский.",
+          "answer": "Vi",
+          "options": [
+            "Vi",
+            "Ni",
+            "De",
+            "Du"
+          ],
+          "why": "мы → vi"
+        },
+        {
+          "word": "Varifrån kommer ___?",
+          "focus": "___",
+          "ru": "Откуда вы (несколько человек)?",
+          "answer": "ni",
+          "options": [
+            "du",
+            "ni",
+            "de",
+            "vi"
+          ],
+          "why": "вы (мн. ч.) → ni"
+        },
+        {
+          "word": "Vad heter ___?",
+          "focus": "___",
+          "ru": "Как тебя зовут?",
+          "answer": "du",
+          "options": [
+            "du",
+            "ni",
+            "han",
+            "jag"
+          ],
+          "why": "ты → du"
+        },
+        {
+          "word": "___ talar persiska.",
+          "focus": "___",
+          "ru": "Они говорят на персидском.",
+          "answer": "De",
+          "options": [
+            "De",
+            "Ni",
+            "Vi",
+            "Det"
+          ],
+          "why": "они → de (читается «дом»)"
+        },
+        {
+          "word": "Var är boken? ___ är här.",
+          "focus": "___",
+          "ru": "Где книга? Она здесь.",
+          "answer": "Den",
+          "options": [
+            "Den",
+            "Det",
+            "Hon",
+            "Han"
+          ],
+          "why": "en bok → den: для предметов используем den/det, а не han/hon"
+        },
+        {
+          "word": "Var är kortet? ___ är här.",
+          "focus": "___",
+          "ru": "Где карточка? Она здесь.",
+          "answer": "Det",
+          "options": [
+            "Den",
+            "Det",
+            "Hon",
+            "Han"
+          ],
+          "why": "ett kort → det"
+        },
+        {
+          "word": "Kim är sjuksköterska. ___ jobbar på ett sjukhus.",
+          "focus": "___",
+          "ru": "Ким — медсестра или медбрат, пол неизвестен.",
+          "answer": "Hen",
+          "options": [
+            "Hen",
+            "Den",
+            "Det",
+            "De"
+          ],
+          "why": "hen — о человеке, когда пол неизвестен или неважен"
+        },
+        {
+          "word": "___ förstår inte.",
+          "focus": "___",
+          "ru": "Я не понимаю.",
+          "answer": "Jag",
+          "options": [
+            "Jag",
+            "Ja",
+            "Du",
+            "Vi"
+          ],
+          "why": "я → jag (ja = «да»)"
+        }
+      ]
+    }
+  ]
+}

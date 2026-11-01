@@ -22,6 +22,8 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
   "date": "2026-10-25",               // date homework was given, YYYY-MM-DD
   "summary": "…",                     // optional, one or two sentences
   "notes": "notes.html",              // optional theory fragment in the same folder
+  "listen": [{ "label": "Rivstart, трек 3 (стр. 11)", "url": "https://…" }],  // optional audio links (shown as "🎧 Слушать")
+  "listenNote": "…",                  // optional hint under the audio links
   "sources": [{ "label": "…", "url": "…" }],
   "sections": [
     {
@@ -50,7 +52,11 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
 }
 ```
 
-`drills` are generic. The `focus` substring is highlighted in `word`, so the same structure works for grammar questions (e.g. word = sentence with a gap, focus = "___").
+`drills` are generic. The `focus` substring is highlighted in `word`, so the same structure works for grammar questions (e.g. word = sentence with a gap, focus = "___"). Each drill gets its own button on the lesson page. Set `"ordered": true` on a drill to keep item order (e.g. answers that follow an audio track).
+
+## Textbook audio
+
+Never download or commit textbook audio, scans or full texts: the repo and image are public, and the books forbid copying. Link to the digital book with `listen` instead. The NoK portal login is the `konto.nok.se` item in Vaultwarden.
 
 ## Content guidelines
 

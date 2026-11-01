@@ -182,6 +182,11 @@ table.words td:first-child { font-weight: 600; white-space: nowrap; }
 table.words .ex { font-size: .85rem; color: var(--muted); }
 .hint-text { font-size: .85rem; color: var(--muted); }
 .sources { margin-top: 28px; font-size: .85rem; color: var(--muted); }
+.listen {
+  margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--soft);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+}
+.listen .small { flex-basis: 100%; }
 
 /* Session (review / quiz / type) */
 .session { max-width: 560px; margin: 0 auto; display: grid; gap: 16px; }
