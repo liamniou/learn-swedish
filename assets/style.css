@@ -158,6 +158,11 @@ select { max-width: 200px; }
 .bar { height: 6px; background: var(--soft); border-radius: 99px; overflow: hidden; grid-column: 1 / -1; margin-top: 6px; }
 .bar > i { display: block; height: 100%; background: var(--good); border-radius: 99px; transition: width .3s; }
 .bar.primary > i { background: var(--primary); }
+.bar.two { display: flex; }
+.bar.two > i { border-radius: 0; }
+.bar.two > i.learning { background: var(--primary); opacity: .45; }
+.drill-res { margin-left: 4px; font-size: .82rem; color: var(--muted); font-weight: 600; }
+.drill-res.full { color: var(--good); }
 
 details.settings { margin-top: 32px; }
 details.settings summary { cursor: pointer; color: var(--muted); }

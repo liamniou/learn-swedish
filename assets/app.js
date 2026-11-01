@@ -3,9 +3,9 @@
 const DAY = 864e5;
 // Spaced-repetition intervals (days) per box; box 0 = still learning.
 const INTERVALS = [0, 1, 3, 7, 14, 30, 60, 120];
-const LEARNED_BOX = 3;
+const LEARNED_BOX = 2;
 const SESSION_SIZE = 15;
-const KEYS = { progress: 'sv.progress.v1', settings: 'sv.settings.v1', daily: 'sv.daily.v1', pending: 'sv.pending.v1', resetAt: 'sv.resetAt.v1' };
+const KEYS = { progress: 'sv.progress.v1', settings: 'sv.settings.v1', daily: 'sv.daily.v1', pending: 'sv.pending.v1', resetAt: 'sv.resetAt.v1', drills: 'sv.drills.v1' };
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -19,6 +19,9 @@ const store = {
 let lessons = [];
 let cards = [];
 let progress = store.get(KEYS.progress, {});
+// Exercise results per drill: { last, best, total, runs, t }.
+let drillResults = store.get(KEYS.drills, {});
+const saveDrills = () => store.set(KEYS.drills, drillResults);
 const settings = Object.assign({ dir: 'sv-ru', lesson: 'all', newPerDay: 20, newPerDayT: 0 }, store.get(KEYS.settings, {}));
 const saveSettings = () => store.set(KEYS.settings, settings);
 const saveProgress = () => store.set(KEYS.progress, progress);
@@ -75,6 +78,7 @@ const sync = {
       progress: Object.fromEntries(keys.filter(k => progress[k]).map(k => [k, progress[k]])),
       daily: daily(),
       settings: { newPerDay: settings.newPerDay, t: settings.newPerDayT },
+      drills: drillResults,
     };
     this.setStatus('syncing');
     try {
@@ -99,6 +103,7 @@ const sync = {
   apply(server) {
     if (server.resetAt > store.get(KEYS.resetAt, 0)) {
       for (const [k, p] of Object.entries(progress)) if ((p.t || 0) <= server.resetAt) delete progress[k];
+      for (const [k, r] of Object.entries(drillResults)) if ((r.t || 0) <= server.resetAt) delete drillResults[k];
       store.set(KEYS.resetAt, server.resetAt);
     }
     const merged = { ...server.progress };
@@ -107,6 +112,8 @@ const sync = {
     }
     progress = merged;
     saveProgress();
+    drillResults = mergeDrillResults(drillResults, server.drills || {});
+    saveDrills();
     const sd = server.daily || {};
     if (sd.date === today()) {
       const d = daily();
@@ -125,6 +132,7 @@ const sync = {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const server = await r.json();
     progress = {};
+    drillResults = {};
     this.pending.clear();
     store.set(KEYS.pending, []);
     localStorage.removeItem(KEYS.daily);
@@ -219,8 +227,8 @@ function buildQueue() {
   return [...shuffle(due), ...fresh.slice(0, newAllowance())];
 }
 
-function grade(c, g) {
-  const key = pk(c);
+function grade(c, g, dir = settings.dir) {
+  const key = pk(c, dir);
   let p = progress[key];
   if (!p) {
     p = { box: 0, due: 0, right: 0, wrong: 0 };
@@ -232,6 +240,40 @@ function grade(c, g) {
   progress[key] = p;
   saveProgress();
   sync.mark(key);
+}
+
+// Test/typing answers feed spaced repetition too. A mistake always sends the word back to review;
+// a correct answer only counts when the word is new or due, so extra practice can't inflate levels.
+function practice(c, ok, dir = settings.dir) {
+  if (!ok) return grade(c, 0, dir);
+  const p = progress[pk(c, dir)];
+  if (!p || p.due <= Date.now()) grade(c, 1, dir);
+}
+
+const drillKey = (l, d) => `${l.id}#${d.id || d.title}`;
+
+function mergeDrillResults(a, b) {
+  const out = { ...a };
+  for (const [k, r] of Object.entries(b)) {
+    const cur = out[k];
+    if (!cur) { out[k] = r; continue; }
+    const newer = (r.t || 0) > (cur.t || 0) ? r : cur;
+    out[k] = { ...newer, best: Math.max(cur.best || 0, r.best || 0), runs: Math.max(cur.runs || 0, r.runs || 0) };
+  }
+  return out;
+}
+
+function recordDrill(l, d, score, total) {
+  const key = drillKey(l, d);
+  const cur = drillResults[key] || { best: 0, runs: 0 };
+  drillResults[key] = { last: score, best: Math.max(cur.best, score), total, runs: cur.runs + 1, t: Date.now() };
+  saveDrills();
+  sync.push(0);
+}
+
+function drillsDone(l) {
+  const ds = (l.drills || []).filter(d => d.items.length);
+  return { done: ds.filter(d => drillResults[drillKey(l, d)]).length, total: ds.length };
 }
 
 function intervalLabel(c, g) {
@@ -282,6 +324,11 @@ function bar(done, total, cls = 'primary') {
   return `<div class="bar ${cls}"><i style="width:${pct}%"></i></div>`;
 }
 
+function bar2(learned, learning, total) {
+  const w = n => total ? `${n / total * 100}%` : '0';
+  return `<div class="bar two"><i class="learned" style="width:${w(learned)}"></i><i class="learning" style="width:${w(learning)}"></i></div>`;
+}
+
 function emptyState(emoji, title, text, actions = '') {
   app.innerHTML = `<div class="panel empty"><div class="big-emoji">${emoji}</div><h2>${title}</h2><p class="muted">${text}</p><div class="row center">${actions}</div></div>`;
 }
@@ -322,11 +369,12 @@ function home() {
       ${recent.map(l => {
         const lc = counts(cards.filter(x => x.lessonId === l.id));
         const pct = lc.total ? Math.round(lc.learned / lc.total * 100) : 0;
+        const dd = drillsDone(l);
         return `<a class="lesson-card" href="#/lesson/${esc(l.id)}">
           <div class="title">${esc(l.title)} ${l.titleSv ? `<span class="muted" lang="sv">· ${esc(l.titleSv)}</span>` : ''}</div>
-          <div class="pct">${pct}%</div>
-          <div class="meta">${fmtDate(l.date)} · ${words(lc.total)}${l.drills?.length ? ' · тренажёр' : ''}</div>
-          ${bar(lc.learned, lc.total, '')}
+          <div class="pct" title="выучено">${pct}%</div>
+          <div class="meta">${fmtDate(l.date)} · ${words(lc.total)}: выучено ${lc.learned}, в процессе ${lc.learning}${dd.total ? ` · упражнения ${dd.done}/${dd.total}` : ''}</div>
+          ${bar2(lc.learned, lc.learning, lc.total)}
         </a>`;
       }).join('')}
     </div>
@@ -351,7 +399,7 @@ function home() {
     saveSettings(); sync.push(0); home();
   };
   $('#export').onclick = () => {
-    const blob = new Blob([JSON.stringify({ progress, settings: { newPerDay: settings.newPerDay }, daily: daily() }, null, 1)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ progress, drills: drillResults, settings: { newPerDay: settings.newPerDay }, daily: daily() }, null, 1)], { type: 'application/json' });
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `svenska-progress-${today()}.json` });
     a.click(); URL.revokeObjectURL(a.href);
   };
@@ -375,15 +423,21 @@ async function lessonPage(id) {
   const l = lessons.find(x => x.id === id);
   if (!l) return emptyState('🤷', 'Урок не найден', '', '<a class="btn" href="#/">На главную</a>');
   const lessonCards = cards.filter(c => c.lessonId === id);
+  const lstat = counts(lessonCards);
   app.innerHTML = `
     <a class="back" href="#/">← Все уроки</a>
     <h1>${esc(l.title)}</h1>
-    <div class="muted">${l.titleSv ? `<span lang="sv">${esc(l.titleSv)}</span> · ` : ''}${fmtDate(l.date)} · ${words(lessonCards.length)}</div>
+    <div class="muted">${l.titleSv ? `<span lang="sv">${esc(l.titleSv)}</span> · ` : ''}${fmtDate(l.date)} · ${words(lessonCards.length)}: выучено ${lstat.learned}, в процессе ${lstat.learning}</div>
     ${l.summary ? `<p>${esc(l.summary)}</p>` : ''}
     ${l.audio?.length ? `<div class="listen">${l.audio.map(playerHTML).join('')}</div>` : ''}
     <div class="row" style="margin-top:14px">
       <button class="btn primary" id="study">Учить слова урока</button>
-      ${(l.drills || []).map((d, i) => d.items.length ? `<a class="btn" href="#/drill/${esc(id)}/${i}">🎯 ${esc(d.title)}</a>` : '').join('')}
+      ${(l.drills || []).map((d, i) => {
+        if (!d.items.length) return '';
+        const r = drillResults[drillKey(l, d)];
+        const res = r ? `<span class="drill-res${r.best === r.total ? ' full' : ''}">${r.best === r.total ? '✓ ' : ''}${r.best}/${r.total}</span>` : '';
+        return `<a class="btn" href="#/drill/${esc(id)}/${i}">🎯 ${esc(d.title)}${res}</a>`;
+      }).join('')}
     </div>
     <div class="tabs">
       ${l.notes ? '<button data-tab="notes">Теория</button>' : ''}
@@ -529,7 +583,7 @@ function reviewDone(total) {
     '<a class="btn primary" href="#/">На главную</a><a class="btn" href="#/quiz">Тест</a>');
 }
 
-function runChoice({ items, restart, title, root = app }) {
+function runChoice({ items, restart, title, root = app, onFinish }) {
   let i = 0, score = 0;
   const wrong = [];
   const ask = () => {
@@ -553,6 +607,7 @@ function runChoice({ items, restart, title, root = app }) {
       answered = true;
       const ok = it.options[k] === it.answer;
       if (ok) score++; else wrong.push(it);
+      it.onAnswer?.(ok);
       buttons.forEach((b, j) => {
         b.disabled = true;
         if (it.options[j] === it.answer) b.classList.add('correct');
@@ -574,6 +629,7 @@ function runChoice({ items, restart, title, root = app }) {
   };
   const finish = () => {
     onKey = null;
+    onFinish?.(score, items.length);
     const pct = Math.round(score / items.length * 100);
     root.innerHTML = `<div class="session"><div class="panel result">
       <div class="big-emoji">${pct >= 90 ? '🏆' : pct >= 60 ? '👍' : '💪'}</div>
@@ -606,6 +662,7 @@ function quizPage() {
       answer,
       explainHTML: `${c.hint ? `<div class="small">🗣 ${esc(c.hint)}</div>` : ''}${exampleHTML(c)}`,
       reviewHTML: `<b lang="sv">${esc(c.sv)}</b> — ${esc(c.ru)}`,
+      onAnswer: ok => practice(c, ok),
     };
   });
   runChoice({ items, restart: quizPage });
@@ -634,7 +691,8 @@ function drillPage(id, idx) {
     };
   });
   const track = drills.length === 1 && drills[0].audio ? l.audio?.find(a => a.id === drills[0].audio) : null;
-  if (!track) return runChoice({ items, restart: () => drillPage(id, idx) });
+  const onFinish = drills.length === 1 ? (score, total) => recordDrill(l, drills[0], score, total) : undefined;
+  if (!track) return runChoice({ items, restart: () => drillPage(id, idx), onFinish });
   // The player lives outside the quiz container so playback continues between questions.
   app.innerHTML = `<div class="session listen-head">
       ${playerHTML(track)}
@@ -642,7 +700,7 @@ function drillPage(id, idx) {
     </div>
     <div id="quiz"></div>`;
   initPlayers(app);
-  runChoice({ items, restart: () => drillPage(id, idx), root: $('#quiz') });
+  runChoice({ items, restart: () => drillPage(id, idx), root: $('#quiz'), onFinish });
 }
 
 // ---------- Audio ----------
@@ -762,6 +820,7 @@ function typePage() {
       checked = true;
       const r = giveUp ? { status: 'bad', msg: 'Правильно:' } : checkTyped(input.value, c.sv);
       if (r.status === 'ok') score++; else wrong.push(c);
+      if (r.status !== 'almost') practice(c, r.status === 'ok', 'ru-sv');
       input.readOnly = true;
       $('#fb').innerHTML = `<div class="feedback ${r.status}">
           <div><b class="${r.status === 'ok' ? 'good-t' : r.status === 'almost' ? 'almost-t' : 'bad-t'}">${esc(r.msg)}</b> <b lang="sv">${esc(c.sv)}</b></div>

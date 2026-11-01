@@ -26,7 +26,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 
-const emptyState = () => ({ version: 1, resetAt: 0, updatedAt: 0, progress: {}, daily: {}, settings: {} });
+const emptyState = () => ({ version: 1, resetAt: 0, updatedAt: 0, progress: {}, daily: {}, settings: {}, drills: {} });
 let state = emptyState();
 
 async function loadState() {
@@ -74,6 +74,25 @@ function mergeProgress(incoming) {
     if (!p || p.t <= state.resetAt) continue;
     const cur = state.progress[key];
     if (!cur || p.t > num(cur.t)) { state.progress[key] = p; changed = true; }
+  }
+  return changed;
+}
+
+// Exercise results: newest run wins for `last`; `best` and `runs` only grow.
+function mergeDrills(incoming) {
+  if (!incoming || typeof incoming !== 'object') return false;
+  let changed = false;
+  for (const [key, r] of Object.entries(incoming)) {
+    if (key.length > 300 || !r || typeof r !== 'object' || num(r.t) <= state.resetAt) continue;
+    const cur = state.drills[key];
+    const next = {
+      last: num(r.t) > num(cur?.t) ? num(r.last) : num(cur.last),
+      best: Math.max(num(cur?.best), num(r.best)),
+      total: num(r.t) > num(cur?.t) ? num(r.total) : num(cur.total),
+      runs: Math.max(num(cur?.runs), num(r.runs)),
+      t: Math.max(num(cur?.t), num(r.t)),
+    };
+    if (!cur || JSON.stringify(cur) !== JSON.stringify(next)) { state.drills[key] = next; changed = true; }
   }
   return changed;
 }
@@ -128,7 +147,7 @@ async function handleApi(req, res, path) {
 
   if (path === '/api/sync' && req.method === 'POST') {
     const body = await readBody(req);
-    const changed = [mergeProgress(body.progress), mergeDaily(body.daily), mergeSettings(body.settings)].some(Boolean);
+    const changed = [mergeProgress(body.progress), mergeDaily(body.daily), mergeSettings(body.settings), mergeDrills(body.drills)].some(Boolean);
     if (changed) { state.updatedAt = Date.now(); await persist(); }
     return send(res, 200, state);
   }
@@ -140,6 +159,7 @@ async function handleApi(req, res, path) {
     state = { ...emptyState(), resetAt: now, updatedAt: now };
     const progress = Object.fromEntries(Object.entries(body.progress || {}).map(([k, p]) => [k, { ...p, t: now + 1 }]));
     mergeProgress(progress);
+    mergeDrills(Object.fromEntries(Object.entries(body.drills || {}).map(([k, r]) => [k, { ...r, t: now + 1 }])));
     mergeDaily(body.daily);
     if (body.settings) mergeSettings({ ...body.settings, t: now });
     await persist();
