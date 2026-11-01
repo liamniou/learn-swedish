@@ -1,5 +1,7 @@
 // Static file server + progress sync API for the Swedish portal. No dependencies.
 import { createServer } from 'node:http';
+import { createReadStream } from 'node:fs';
+import { Readable } from 'node:stream';
 import { readFile, writeFile, rename, mkdir, readdir, unlink, stat } from 'node:fs/promises';
 import { join, normalize, extname, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -120,6 +122,8 @@ async function readBody(req) {
 async function handleApi(req, res, path) {
   if (path === '/api/health') return send(res, 200, { ok: true });
 
+  if (path.startsWith('/api/audio/')) return serveAudio(req, res, path.slice('/api/audio/'.length));
+
   if (path === '/api/state' && req.method === 'GET') return send(res, 200, state);
 
   if (path === '/api/sync' && req.method === 'POST') {
@@ -143,6 +147,62 @@ async function handleApi(req, res, path) {
   }
 
   send(res, 404, { error: 'not found' });
+}
+
+// Audio tracks: a local file in $DATA_DIR/audio/<id>.mp3 wins; otherwise the track is streamed from
+// the URL in $DATA_DIR/audio-sources.json. Both live only on the host so licensed audio stays out of git.
+async function serveAudio(req, res, id) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Method not allowed');
+  if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(id)) return send(res, 404, 'Not found');
+
+  const local = join(DATA_DIR, 'audio', `${id}.mp3`);
+  const st = await stat(local).catch(() => null);
+  if (st?.isFile()) return sendFileRange(req, res, local, st.size, 'audio/mpeg');
+
+  let sources;
+  try { sources = JSON.parse(await readFile(join(DATA_DIR, 'audio-sources.json'), 'utf8')); }
+  catch { sources = {}; }
+  const url = sources[id];
+  if (typeof url !== 'string' || !/^https:\/\//.test(url)) return send(res, 404, 'Not found');
+
+  const headers = {};
+  if (req.headers.range) headers.Range = req.headers.range;
+  const ac = new AbortController();
+  res.on('close', () => ac.abort());
+  let up;
+  try { up = await fetch(url, { method: req.method, headers, signal: ac.signal }); }
+  catch { return send(res, 502, 'Upstream unavailable'); }
+  if (up.status !== 200 && up.status !== 206) return send(res, 502, `Upstream HTTP ${up.status}`);
+
+  const out = {
+    'Content-Type': up.headers.get('content-type') || 'audio/mpeg',
+    'Accept-Ranges': 'bytes',
+    'Cache-Control': 'private, max-age=86400',
+  };
+  for (const h of ['content-length', 'content-range']) if (up.headers.get(h)) out[h] = up.headers.get(h);
+  res.writeHead(up.status, out);
+  if (req.method === 'HEAD' || !up.body) return res.end();
+  Readable.fromWeb(up.body).on('error', () => res.destroy()).pipe(res);
+}
+
+function sendFileRange(req, res, file, size, type) {
+  const headers = { 'Content-Type': type, 'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=86400' };
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+  let start = 0, end = size - 1, code = 200;
+  if (m && (m[1] || m[2])) {
+    start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+    end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+    if (start > end || start >= size) {
+      res.writeHead(416, { 'Content-Range': `bytes */${size}` });
+      return res.end();
+    }
+    code = 206;
+    headers['Content-Range'] = `bytes ${start}-${end}/${size}`;
+  }
+  headers['Content-Length'] = end - start + 1;
+  res.writeHead(code, headers);
+  if (req.method === 'HEAD') return res.end();
+  createReadStream(file, { start, end }).pipe(res);
 }
 
 async function serveStatic(req, res, path) {

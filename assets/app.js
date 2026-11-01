@@ -380,11 +380,7 @@ async function lessonPage(id) {
     <h1>${esc(l.title)}</h1>
     <div class="muted">${l.titleSv ? `<span lang="sv">${esc(l.titleSv)}</span> · ` : ''}${fmtDate(l.date)} · ${words(lessonCards.length)}</div>
     ${l.summary ? `<p>${esc(l.summary)}</p>` : ''}
-    ${l.listen?.length ? `<div class="listen">
-      <b>🎧 Слушать</b>
-      ${l.listen.map(a => `<a class="btn" href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.label)} ↗</a>`).join('')}
-      ${l.listenNote ? `<div class="small muted">${esc(l.listenNote)}</div>` : ''}
-    </div>` : ''}
+    ${l.audio?.length ? `<div class="listen">${l.audio.map(playerHTML).join('')}</div>` : ''}
     <div class="row" style="margin-top:14px">
       <button class="btn primary" id="study">Учить слова урока</button>
       ${(l.drills || []).map((d, i) => d.items.length ? `<a class="btn" href="#/drill/${esc(id)}/${i}">🎯 ${esc(d.title)}</a>` : '').join('')}
@@ -397,6 +393,7 @@ async function lessonPage(id) {
     ${l.sources?.length ? `<div class="sources">Источники: ${l.sources.map(s => s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a>` : esc(s.label)).join(' · ')}</div>` : ''}`;
 
   $('#study').onclick = () => { settings.lesson = id; saveSettings(); syncHeader(); location.hash = '#/review'; };
+  initPlayers(app);
 
   let notesHTML = null;
   const show = async tab => {
@@ -532,14 +529,14 @@ function reviewDone(total) {
     '<a class="btn primary" href="#/">На главную</a><a class="btn" href="#/quiz">Тест</a>');
 }
 
-function runChoice({ items, restart, title }) {
+function runChoice({ items, restart, title, root = app }) {
   let i = 0, score = 0;
   const wrong = [];
   const ask = () => {
     if (i >= items.length) return finish();
     const it = items[i];
     let answered = false;
-    app.innerHTML = `<div class="session">
+    root.innerHTML = `<div class="session">
       <div class="session-head"><span>${i + 1} / ${items.length}</span>${bar(i, items.length)}<span>✓ ${score}</span></div>
       <div class="q-card">
         <div class="q-label muted">${esc(it.label || title || '')}</div>
@@ -548,7 +545,7 @@ function runChoice({ items, restart, title }) {
       </div>
       <div class="options">${it.options.map((o, k) => `<button class="opt" data-k="${k}"><span class="key">${k + 1}</span><span>${esc(o)}</span></button>`).join('')}</div>
       <div id="fb"></div>
-      <div class="kbd-help">1–${it.options.length} — выбрать ответ · Enter — дальше</div>
+      <div class="kbd-help">1–${it.options.length} — выбрать ответ · Enter — дальше${$('.player') ? ' · P — аудио' : ''}</div>
     </div>`;
     const buttons = $$('.opt');
     const choose = k => {
@@ -578,7 +575,7 @@ function runChoice({ items, restart, title }) {
   const finish = () => {
     onKey = null;
     const pct = Math.round(score / items.length * 100);
-    app.innerHTML = `<div class="session"><div class="panel result">
+    root.innerHTML = `<div class="session"><div class="panel result">
       <div class="big-emoji">${pct >= 90 ? '🏆' : pct >= 60 ? '👍' : '💪'}</div>
       <div class="score">${score} / ${items.length}</div>
       <div class="muted">${pct}% правильных ответов</div>
@@ -636,7 +633,69 @@ function drillPage(id, idx) {
       reviewHTML: `<b lang="sv">${esc(it.word)}</b>: <b>${esc(it.focus)}</b> → ${esc(it.answer)}${it.why ? ` <span class="muted">(${esc(it.why)})</span>` : ''}`,
     };
   });
-  runChoice({ items, restart: () => drillPage(id, idx) });
+  const track = drills.length === 1 && drills[0].audio ? l.audio?.find(a => a.id === drills[0].audio) : null;
+  if (!track) return runChoice({ items, restart: () => drillPage(id, idx) });
+  // The player lives outside the quiz container so playback continues between questions.
+  app.innerHTML = `<div class="session listen-head">
+      ${playerHTML(track)}
+      ${drills[0].intro ? `<div class="small muted">${esc(drills[0].intro)}</div>` : ''}
+    </div>
+    <div id="quiz"></div>`;
+  initPlayers(app);
+  runChoice({ items, restart: () => drillPage(id, idx), root: $('#quiz') });
+}
+
+// ---------- Audio ----------
+// Tracks are streamed by the server from api/audio/<id>; the source URLs are private to the server.
+
+const fmtTime = s => Number.isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : '0:00';
+const RATES = [1, 0.85, 0.7];
+
+function playerHTML(a) {
+  return `<div class="player" data-id="${esc(a.id)}">
+    <div class="player-label">🎧 ${esc(a.label)}</div>
+    <audio preload="metadata" src="api/audio/${encodeURIComponent(a.id)}"></audio>
+    <div class="player-controls">
+      <button class="play" type="button" aria-label="Играть" title="Играть / пауза (P)">▶</button>
+      <button class="chip back5" type="button" title="Назад на 5 секунд">↺ 5 с</button>
+      <input class="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Позиция">
+      <span class="time">0:00 / 0:00</span>
+      <button class="chip rate" type="button" title="Скорость">1×</button>
+    </div>
+    <div class="player-error small" hidden>Не удалось загрузить аудио.</div>
+  </div>`;
+}
+
+function initPlayers(root) {
+  $$('.player', root).forEach(p => {
+    const audio = $('audio', p), play = $('.play', p), seek = $('.seek', p), time = $('.time', p), rate = $('.rate', p);
+    let dragging = false;
+    const update = () => {
+      if (!dragging) seek.value = audio.currentTime;
+      time.textContent = `${fmtTime(audio.currentTime)} / ${fmtTime(audio.duration)}`;
+    };
+    audio.addEventListener('loadedmetadata', () => { seek.max = audio.duration || 0; update(); });
+    audio.addEventListener('timeupdate', update);
+    audio.addEventListener('play', () => {
+      play.textContent = '⏸'; play.setAttribute('aria-label', 'Пауза');
+      $$('audio').forEach(o => o !== audio && o.pause());
+    });
+    audio.addEventListener('pause', () => { play.textContent = '▶'; play.setAttribute('aria-label', 'Играть'); });
+    audio.addEventListener('ended', () => { audio.currentTime = 0; });
+    audio.addEventListener('error', () => { $('.player-error', p).hidden = false; play.disabled = true; });
+    play.onclick = () => audio.paused ? audio.play() : audio.pause();
+    // Mouse clicks must not leave focus on player controls, or Enter/1-4 would hit them instead of the quiz.
+    $$('button', p).forEach(b => { b.onmousedown = e => e.preventDefault(); });
+    seek.addEventListener('change', () => seek.blur());
+    $('.back5', p).onclick = () => { audio.currentTime = Math.max(0, audio.currentTime - 5); };
+    rate.onclick = () => {
+      const next = RATES[(RATES.indexOf(audio.playbackRate) + 1) % RATES.length];
+      audio.playbackRate = next;
+      rate.textContent = `${String(next).replace('.', ',')}×`;
+    };
+    seek.oninput = () => { dragging = true; time.textContent = `${fmtTime(+seek.value)} / ${fmtTime(audio.duration)}`; };
+    seek.onchange = () => { audio.currentTime = +seek.value; dragging = false; };
+  });
 }
 
 // Typing: compare ignoring case, punctuation and articles; flag missing å/ä/ö and wrong en/ett.
@@ -756,9 +815,16 @@ function syncHeader() {
 }
 
 document.addEventListener('keydown', e => {
-  if (!onKey || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
-  if (t.matches?.('input, textarea, select')) return;
+  if (t.matches?.('input:not([type="range"]), textarea, select')) return;
+  // P (any keyboard layout) toggles the first audio player on the page.
+  if (e.code === 'KeyP') {
+    const btn = $('.player .play:not(:disabled)');
+    if (btn) { e.preventDefault(); btn.click(); }
+    return;
+  }
+  if (!onKey || t.matches?.('input')) return;
   if (t.matches?.('button:not(:disabled), a[href]') && (e.key === 'Enter' || e.key === ' ')) return;
   onKey(e);
 });

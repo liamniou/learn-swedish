@@ -11,7 +11,9 @@ Features: flip cards (sv ↔ ru), spaced-repetition review, multiple-choice quiz
 - The browser keeps a localStorage cache and syncs through `POST /api/sync`. Every card entry has a timestamp, and the newest one wins, so several devices can be used at once. Changes made offline are queued and sent once the server is reachable. The cloud icon in the header shows sync status.
 - Import and reset (in the home page settings) replace the server state for all devices.
 
-API: `GET /api/health`, `GET /api/state`, `POST /api/sync`, `PUT /api/state`.
+API: `GET /api/health`, `GET /api/state`, `POST /api/sync`, `PUT /api/state`, `GET /api/audio/<id>`.
+
+Lesson audio plays inside the portal. Track ids map to files or upstream URLs in the private data folder, never in git (see [AGENTS.md](AGENTS.md)).
 
 ## Run locally
 

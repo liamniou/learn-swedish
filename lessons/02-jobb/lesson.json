@@ -4,17 +4,12 @@
   "date": "2026-11-01",
   "summary": "Rivstart A1+A2, глава 1, стр. 11–13: личные местоимения, профессии, как рассказать, чем ты занимаешься, и упражнение на аудирование H.",
   "notes": "notes.html",
-  "listen": [
+  "audio": [
     {
-      "label": "Kapitel 1 — аудио, трек 3 (упр. H)",
-      "url": "https://digi.nokportalen.se/contents/be3ec0dd-410b-47fd-b273-00e47712d3e0?close_url=/areas/5b5f7bdf-516f-480f-9a17-8311c5ff49aa"
-    },
-    {
-      "label": "Цифровая книга Rivstart",
-      "url": "https://digi.nokportalen.se/books/d5528a43-29db-4d4b-bef4-127493fa703f?statisticsIsbn=9789127482487"
+      "id": "rivstart-a1a2-k1-03",
+      "label": "Трек 3 · упр. H, стр. 11: Varifrån kommer de?"
     }
   ],
-  "listenNote": "Нужен вход в NoK-портал. Включите трек 3, затем пройдите «Упр. H: Varifrån kommer de?» — вопросы идут в порядке записи.",
   "sources": [
     {
       "label": "Rivstart A1+A2 Textbok (Natur & Kultur), стр. 11–13"
@@ -187,6 +182,8 @@
   "drills": [
     {
       "title": "Упр. H: Varifrån kommer de?",
+      "audio": "rivstart-a1a2-k1-03",
+      "intro": "Четыре человека рассказывают о себе. Слушайте, откуда они и на каких языках говорят. Вопросы идут в порядке записи — можно ставить на паузу.",
       "ordered": true,
       "items": [
         {

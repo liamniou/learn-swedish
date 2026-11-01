@@ -22,8 +22,7 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
   "date": "2026-10-25",               // date homework was given, YYYY-MM-DD
   "summary": "…",                     // optional, one or two sentences
   "notes": "notes.html",              // optional theory fragment in the same folder
-  "listen": [{ "label": "Rivstart, трек 3 (стр. 11)", "url": "https://…" }],  // optional audio links (shown as "🎧 Слушать")
-  "listenNote": "…",                  // optional hint under the audio links
+  "audio": [{ "id": "rivstart-a1a2-k1-03", "label": "Трек 3 · упр. H, стр. 11" }],  // optional in-page players; ids only, never URLs
   "sources": [{ "label": "…", "url": "…" }],
   "sections": [
     {
@@ -52,11 +51,25 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
 }
 ```
 
+A drill can be tied to a track: `"audio": "<audio id>"` plus an optional `"intro"`. The player then sits above the questions and keeps playing between them. Use `"ordered": true` so questions follow the recording.
+
 `drills` are generic. The `focus` substring is highlighted in `word`, so the same structure works for grammar questions (e.g. word = sentence with a gap, focus = "___"). Each drill gets its own button on the lesson page. Set `"ordered": true` on a drill to keep item order (e.g. answers that follow an audio track).
 
 ## Textbook audio
 
-Never download or commit textbook audio, scans or full texts: the repo and image are public, and the books forbid copying. Link to the digital book with `listen` instead. The NoK portal login is the `konto.nok.se` item in Vaultwarden.
+The repo and the GHCR image are public, so never commit textbook audio, scans, transcripts or direct audio URLs. Audio plays inside the portal through `/api/audio/<id>`. The server resolves the id on eva00 under `/home/lestar/_volumes/learn-swedish/data/`:
+
+- `audio/<id>.mp3`, if present, is served directly (with seeking).
+- Otherwise `audio-sources.json` (`{ "<id>": "https://…" }`) maps the id to an upstream URL, which the server streams.
+
+To add a track:
+
+1. Sign in to the NoK portal with the `konto.nok.se` item from Vaultwarden.
+2. Open the chapter's *Ljudfiler* page and play the track.
+3. Read the `files.nokportalen.se/audios/transcoded/<uuid>` URL from the page's network requests.
+4. Add it to `audio-sources.json` on eva00 (`ssh lestar@192.168.0.237`).
+
+Track ids: `rivstart-a1a2-k<chapter>-<track, 2 digits>`. The *Hörförståelsetexter* PDF in the extra material has transcripts. Its track numbers can be off by one from the book, so trust the number printed in the book.
 
 ## Content guidelines
 

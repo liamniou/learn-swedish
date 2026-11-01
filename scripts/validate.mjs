@@ -25,7 +25,14 @@ for (const id of index.lessons) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(l.date || '')) err(id, 'date must be YYYY-MM-DD');
   if (l.notes && !existsSync(join(dir, l.notes))) err(id, `notes file not found: ${l.notes}`);
   if (!Array.isArray(l.sections) || !l.sections.length) err(id, 'needs at least one section');
-  for (const a of l.listen || []) if (!a.label || !/^https?:\/\//.test(a.url || '')) err(id, `listen entry needs label and http(s) url: ${JSON.stringify(a)}`);
+  const audioIds = new Set();
+  for (const a of l.audio || []) {
+    if (!/^[a-z0-9][a-z0-9-]{0,80}$/.test(a.id || '')) err(id, `audio id must be lowercase a-z0-9-: ${JSON.stringify(a)}`);
+    if (!a.label) err(id, `audio "${a.id}" needs a label`);
+    if (a.url || a.src) err(id, `audio "${a.id}": no URLs in lessons; map ids in data/audio-sources.json on the server`);
+    audioIds.add(a.id);
+  }
+  for (const d of l.drills || []) if (d.audio && !audioIds.has(d.audio)) err(id, `drill "${d.title}" uses unknown audio "${d.audio}"`);
 
   const seen = new Set();
   for (const [si, s] of (l.sections || []).entries()) {
