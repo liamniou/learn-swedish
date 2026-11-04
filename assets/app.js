@@ -5,7 +5,7 @@ const DAY = 864e5;
 const INTERVALS = [0, 1, 3, 7, 14, 30, 60, 120];
 const LEARNED_BOX = 2;
 const SESSION_SIZE = 15;
-const KEYS = { progress: 'sv.progress.v1', settings: 'sv.settings.v1', daily: 'sv.daily.v1', pending: 'sv.pending.v1', resetAt: 'sv.resetAt.v1', drills: 'sv.drills.v1' };
+const KEYS = { progress: 'sv.progress.v1', settings: 'sv.settings.v1', daily: 'sv.daily.v1', pending: 'sv.pending.v1', resetAt: 'sv.resetAt.v1', drills: 'sv.drills.v1', answers: 'sv.answers.v1' };
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -22,6 +22,9 @@ let progress = store.get(KEYS.progress, {});
 // Exercise results per drill: { last, best, total, runs, t }.
 let drillResults = store.get(KEYS.drills, {});
 const saveDrills = () => store.set(KEYS.drills, drillResults);
+// Written book exercises: { v: {partIdx: value}, checked, score, total, t }.
+let answers = store.get(KEYS.answers, {});
+const saveAnswers = () => store.set(KEYS.answers, answers);
 const settings = Object.assign({ dir: 'sv-ru', lesson: 'all', newPerDay: 20, newPerDayT: 0 }, store.get(KEYS.settings, {}));
 const saveSettings = () => store.set(KEYS.settings, settings);
 const saveProgress = () => store.set(KEYS.progress, progress);
@@ -79,6 +82,7 @@ const sync = {
       daily: daily(),
       settings: { newPerDay: settings.newPerDay, t: settings.newPerDayT },
       drills: drillResults,
+      answers,
     };
     this.setStatus('syncing');
     try {
@@ -104,6 +108,7 @@ const sync = {
     if (server.resetAt > store.get(KEYS.resetAt, 0)) {
       for (const [k, p] of Object.entries(progress)) if ((p.t || 0) <= server.resetAt) delete progress[k];
       for (const [k, r] of Object.entries(drillResults)) if ((r.t || 0) <= server.resetAt) delete drillResults[k];
+      for (const [k, a] of Object.entries(answers)) if ((a.t || 0) <= server.resetAt) delete answers[k];
       store.set(KEYS.resetAt, server.resetAt);
     }
     const merged = { ...server.progress };
@@ -114,6 +119,10 @@ const sync = {
     saveProgress();
     drillResults = mergeDrillResults(drillResults, server.drills || {});
     saveDrills();
+    for (const [k, a] of Object.entries(server.answers || {})) {
+      if (!answers[k] || (a.t || 0) > (answers[k].t || 0)) answers[k] = a;
+    }
+    saveAnswers();
     const sd = server.daily || {};
     if (sd.date === today()) {
       const d = daily();
@@ -133,6 +142,7 @@ const sync = {
     const server = await r.json();
     progress = {};
     drillResults = {};
+    answers = {};
     this.pending.clear();
     store.set(KEYS.pending, []);
     localStorage.removeItem(KEYS.daily);
@@ -273,7 +283,9 @@ function recordDrill(l, d, score, total) {
 
 function drillsDone(l) {
   const ds = (l.drills || []).filter(d => d.items.length);
-  return { done: ds.filter(d => drillResults[drillKey(l, d)]).length, total: ds.length };
+  const xs = l.exercises || [];
+  const done = ds.filter(d => drillResults[drillKey(l, d)]).length + xs.filter(x => answers[exKey(l, x)]?.checked).length;
+  return { done, total: ds.length + xs.length };
 }
 
 function intervalLabel(c, g) {
@@ -399,7 +411,7 @@ function home() {
     saveSettings(); sync.push(0); home();
   };
   $('#export').onclick = () => {
-    const blob = new Blob([JSON.stringify({ progress, drills: drillResults, settings: { newPerDay: settings.newPerDay }, daily: daily() }, null, 1)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ progress, drills: drillResults, answers, settings: { newPerDay: settings.newPerDay }, daily: daily() }, null, 1)], { type: 'application/json' });
     const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `svenska-progress-${today()}.json` });
     a.click(); URL.revokeObjectURL(a.href);
   };
@@ -438,6 +450,7 @@ async function lessonPage(id) {
         const res = r ? `<span class="drill-res${r.best === r.total ? ' full' : ''}">${r.best === r.total ? '✓ ' : ''}${r.best}/${r.total}</span>` : '';
         return `<a class="btn" href="#/drill/${esc(id)}/${i}">🎯 ${esc(d.title)}${res}</a>`;
       }).join('')}
+      ${(l.exercises || []).map(x => `<a class="btn" href="#/ex/${esc(id)}/${esc(x.id)}">📝 ${esc(x.title)}${exStatusHTML(l, x)}</a>`).join('')}
     </div>
     <div class="tabs">
       ${l.notes ? '<button data-tab="notes">Теория</button>' : ''}
@@ -855,7 +868,201 @@ function typePage() {
 
 // ---------- Router & header ----------
 
-const routes = { '': home, lesson: lessonPage, cards: cardsPage, review: reviewPage, quiz: quizPage, type: typePage, drill: drillPage };
+// ---------- Written book exercises ----------
+// Part types: "check" (tick boxes), "blanks" (text with {{answer|alt}} gaps; {{}} = free gap), "write" (free text).
+// Answers autosave to the server and stay viewable after checking.
+
+const exKey = (l, x) => `${l.id}#${x.id}`;
+const emptyValues = v => Object.values(v || {}).every(a => Array.isArray(a) ? a.every(s => !String(s).trim()) : !String(a).trim());
+// Cleared exercises are stored as an empty entry (not deleted) so the clear syncs to other devices.
+const hasAnswers = a => !!a && (a.checked || !emptyValues(a.v));
+const GAP_RE = /\{\{([^}]*)\}\}/g;
+
+function exStatusHTML(l, x) {
+  const a = answers[exKey(l, x)];
+  if (!hasAnswers(a)) return '';
+  if (!a.checked) return '<span class="drill-res">черновик</span>';
+  if (!a.total) return '<span class="drill-res full">✓</span>';
+  return `<span class="drill-res${a.score === a.total ? ' full' : ''}">${a.score === a.total ? '✓ ' : ''}${a.score}/${a.total}</span>`;
+}
+
+function gapStatus(value, alts) {
+  const v = norm(value || '');
+  if (!v) return 'bad';
+  const keys = alts.map(norm);
+  if (keys.includes(v)) return 'ok';
+  if (keys.map(fold).includes(fold(v))) return 'almost';
+  return 'bad';
+}
+
+// Returns per-part marks plus score/total; parts without an answer key are not scored.
+function gradeExercise(x, values) {
+  let score = 0, total = 0;
+  const marks = x.parts.map((part, i) => {
+    const v = values[i];
+    if (part.type === 'check' && part.answer) {
+      const picked = new Set(v || []), key = new Set(part.answer);
+      const opts = part.options.map(o => picked.has(o) ? (key.has(o) ? 'hit' : 'false') : (key.has(o) ? 'miss' : ''));
+      const ok = !opts.includes('false') && !opts.includes('miss');
+      total++; if (ok) score++;
+      return { ok, opts };
+    }
+    if (part.type === 'blanks') {
+      const gaps = [...part.text.matchAll(GAP_RE)].map((m, j) => {
+        const alts = m[1].split('|').map(t => t.trim()).filter(Boolean);
+        if (!alts.length) return '';
+        const st = gapStatus((v || [])[j], alts);
+        total++; if (st === 'ok') score++;
+        return st;
+      });
+      return { gaps };
+    }
+    return {};
+  });
+  return { marks, score, total };
+}
+
+function partHTML(part, i, value, mark, locked) {
+  const dis = locked ? 'disabled' : '';
+  if (part.type === 'check') {
+    const picked = new Set(value || []);
+    return `<div class="ws-part ws-check${mark ? (mark.ok ? ' ok' : ' bad') : ''}">
+      ${part.label ? `<div class="ws-label">${esc(part.label)}</div>` : ''}
+      ${part.options.map((o, k) => `<label class="ws-opt ${mark?.opts?.[k] || ''}" lang="sv">
+        <input type="checkbox" data-part="${i}" value="${esc(o)}" ${picked.has(o) ? 'checked' : ''} ${dis}>
+        <span>${esc(o)}</span></label>`).join('')}
+      ${mark && part.note ? `<div class="ws-note">${esc(part.note)}</div>` : ''}
+    </div>`;
+  }
+  if (part.type === 'blanks') {
+    let j = 0, last = 0, html = '';
+    for (const m of part.text.matchAll(GAP_RE)) {
+      html += esc(part.text.slice(last, m.index));
+      last = m.index + m[0].length;
+      const k = j++;
+      const alts = m[1].split('|').map(t => t.trim()).filter(Boolean);
+      const st = mark?.gaps?.[k] || '';
+      const size = Math.max(6, ...alts.map(a => a.length + 2));
+      html += `<input class="gap ${st}" type="text" data-part="${i}" data-gap="${k}" size="${size}" value="${esc((value || [])[k] || '')}"
+        autocomplete="off" autocapitalize="off" spellcheck="false" lang="sv" ${dis}>`;
+      if (st && st !== 'ok') html += `<span class="gap-key">${esc(alts[0])}</span>`;
+    }
+    html += esc(part.text.slice(last));
+    return `<div class="ws-part ws-blanks">${part.label ? `<span class="ws-label">${esc(part.label)}</span> ` : ''}<span lang="sv">${html}</span>
+      ${mark && part.note ? `<div class="ws-note">${esc(part.note)}</div>` : ''}</div>`;
+  }
+  return `<div class="ws-part ws-write">
+    ${part.label || part.prompt ? `<div class="ws-label">${esc([part.label, part.prompt].filter(Boolean).join(' '))}</div>` : ''}
+    <textarea data-part="${i}" rows="${part.rows || 4}" lang="sv" spellcheck="false" ${dis}>${esc(value || '')}</textarea>
+  </div>`;
+}
+
+function exercisePage(lessonId, exId) {
+  const l = lessons.find(x => x.id === lessonId);
+  const x = l?.exercises?.find(e => e.id === exId);
+  if (!x) return emptyState('🤷', 'Упражнение не найдено', '', '<a class="btn" href="#/">На главную</a>');
+  const key = exKey(l, x);
+  const track = x.audio ? l.audio?.find(a => a.id === x.audio) : null;
+  const scored = gradeExercise(x, {}).total > 0;
+  const hasLetters = x.parts.some(p => p.type !== 'check');
+
+  app.innerHTML = `<div class="session ws">
+    <a class="back" href="#/lesson/${esc(l.id)}">← ${esc(l.title)}</a>
+    <h1>${esc(x.title)}</h1>
+    ${track ? playerHTML(track) : ''}
+    <div class="ws-task">
+      ${x.task ? `<div lang="sv"><b>${esc(x.task)}</b></div>` : ''}
+      ${x.taskRu ? `<div class="muted">${esc(x.taskRu)}</div>` : ''}
+    </div>
+    <form id="ws" class="ws-parts" autocomplete="off"></form>
+    ${hasLetters ? `<div class="letters" id="ws-letters">${['å', 'ä', 'ö'].map(ch => `<button type="button" data-ch="${ch}">${ch}</button>`).join('')}</div>` : ''}
+    <div id="ws-result"></div>
+    <div class="row" id="ws-actions"></div>
+  </div>`;
+  initPlayers(app);
+
+  const form = $('#ws');
+  let lastFocus = null;
+  const values = () => {
+    const v = {};
+    x.parts.forEach((p, i) => {
+      if (p.type === 'check') v[i] = $$(`input[data-part="${i}"]`, form).filter(c => c.checked).map(c => c.value);
+      else if (p.type === 'blanks') v[i] = $$(`input[data-part="${i}"]`, form).map(g => g.value);
+      else v[i] = $(`textarea[data-part="${i}"]`, form)?.value || '';
+    });
+    return v;
+  };
+  const save = entry => {
+    answers[key] = { ...(entry || { v: {}, checked: false }), t: Date.now() };
+    saveAnswers();
+    sync.push(300);
+  };
+
+  const render = () => {
+    const a = answers[key];
+    const locked = !!a?.checked;
+    const g = locked ? gradeExercise(x, a.v || {}) : null;
+    form.innerHTML = x.parts.map((p, i) => partHTML(p, i, a?.v?.[i], g?.marks[i], locked)).join('');
+    if ($('#ws-letters')) $('#ws-letters').hidden = locked;
+    $('#ws-result').innerHTML = !locked ? '' : g.total
+      ? `<div class="feedback ${g.score === g.total ? 'ok' : g.score >= g.total / 2 ? 'almost' : 'bad'}">
+          <div><b>${g.score} / ${g.total}</b> ${g.score === g.total ? '— всё верно!' : ''}</div>
+          <div class="small muted">Сохранено ${new Date(a.t).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</div>
+        </div>`
+      : `<div class="feedback ok"><div><b>Сохранено</b></div><div class="small muted">${new Date(a.t).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</div></div>`;
+    $('#ws-actions').innerHTML = locked
+      ? `<button class="btn" id="ws-edit" type="button">✏️ Изменить ответы</button>
+         <button class="btn danger" id="ws-clear" type="button">Начать заново</button>
+         <span class="spacer"></span><a class="btn" href="#/lesson/${esc(l.id)}">К уроку</a>`
+      : `<button class="btn primary big" id="ws-check" type="button">${scored ? 'Проверить' : 'Сохранить'}</button>
+         <span class="small muted" id="ws-saved">${hasAnswers(a) ? 'Черновик сохранён' : ''}</span>`;
+
+    if (locked) {
+      $('#ws-edit').onclick = () => { save({ v: a.v, checked: false }); render(); };
+      $('#ws-clear').onclick = () => {
+        if (!confirm('Удалить ваши ответы и начать заново?')) return;
+        save(null); render();
+      };
+    } else {
+      $('#ws-check').onclick = () => {
+        const v = values();
+        if (emptyValues(v) && !confirm('Ответов нет. Всё равно проверить?')) return;
+        const { score, total } = gradeExercise(x, v);
+        save({ v, checked: true, score, total });
+        render();
+        $('#ws-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+    }
+  };
+
+  let draftTimer = null;
+  form.addEventListener('input', () => {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      const v = values();
+      save(emptyValues(v) ? null : { v, checked: false });
+      const el = $('#ws-saved');
+      if (el) el.textContent = emptyValues(v) ? '' : 'Черновик сохранён';
+    }, 500);
+  });
+  form.addEventListener('focusin', e => { if (e.target.matches('input[type="text"], textarea')) lastFocus = e.target; });
+  form.addEventListener('submit', e => e.preventDefault());
+  $$('#ws-letters button').forEach(b => {
+    b.onmousedown = e => e.preventDefault();
+    b.onclick = () => {
+      const el = lastFocus;
+      if (!el || el.disabled) return;
+      const s0 = el.selectionStart ?? el.value.length, s1 = el.selectionEnd ?? s0;
+      el.value = el.value.slice(0, s0) + b.dataset.ch + el.value.slice(s1);
+      el.setSelectionRange(s0 + 1, s0 + 1);
+      el.focus();
+      form.dispatchEvent(new Event('input'));
+    };
+  });
+  render();
+}
+
+const routes = { '': home, lesson: lessonPage, cards: cardsPage, review: reviewPage, quiz: quizPage, type: typePage, drill: drillPage, ex: exercisePage };
 
 function route() {
   onKey = null;
@@ -876,7 +1083,7 @@ function syncHeader() {
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const t = e.target;
-  if (t.matches?.('input:not([type="range"]), textarea, select')) return;
+  if (t.matches?.('input:not([type="range"]):not([type="checkbox"]), textarea, select')) return;
   // P (any keyboard layout) toggles the first audio player on the page.
   if (e.code === 'KeyP') {
     const btn = $('.player .play:not(:disabled)');

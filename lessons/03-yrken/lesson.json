@@ -1,0 +1,87 @@
+{
+  "title": "Профессии. Работаешь или учишься?",
+  "titleSv": "Jobbar du?",
+  "date": "2026-11-04",
+  "summary": "Rivstart A1+A2, глава 1, стр. 14: профессии, вопросы «Jobbar du? Pluggar du?» и упражнение на аудирование F (трек 5).",
+  "notes": "notes.html",
+  "audio": [
+    { "id": "rivstart-a1a2-k1-05", "label": "Трек 5 · упр. F, стр. 14: Vilka ord hör du?" }
+  ],
+  "sources": [
+    { "label": "Rivstart A1+A2 Textbok (Natur & Kultur), стр. 14" }
+  ],
+  "sections": [
+    {
+      "title": "Профессии (упр. E–F)",
+      "note": "läkare, tandläkare, sjuksköterska, lärare и servitör есть в уроке «Кем ты работаешь?».",
+      "words": [
+        { "sv": "en pensionär", "ru": "пенсионер", "hint": "-sion- → [ɧ]: «панɧунэр», ударение на последний слог", "ex": "Min pappa är pensionär.", "exRu": "Мой папа на пенсии." },
+        { "sv": "en ingenjör", "ru": "инженер", "hint": "g здесь → [ɧ]: «инɧеньёр»", "ex": "Hon är ingenjör på Volvo.", "exRu": "Она инженер в Volvo." },
+        { "sv": "en kock", "ru": "повар", "hint": "o краткое → [о]: «кок»", "ex": "Kocken lagar mat.", "exRu": "Повар готовит еду." },
+        { "sv": "en advokat", "ru": "адвокат, юрист", "hint": "ударение на последний слог", "ex": "Jag behöver en advokat.", "exRu": "Мне нужен адвокат." },
+        { "sv": "en programmerare", "ru": "программист", "hint": "мн. ч. тоже programmerare", "ex": "Han jobbar som programmerare.", "exRu": "Он работает программистом." },
+        { "sv": "en frisör", "ru": "парикмахер", "hint": "ударение на последний слог: «фрисёр»", "ex": "Frisören klipper mitt hår.", "exRu": "Парикмахер стрижёт мне волосы." },
+        { "sv": "en polis", "ru": "полицейский; полиция", "hint": "o → [у]: «пулис», ударение на последний слог", "ex": "Ring polisen!", "exRu": "Звони в полицию!" },
+        { "sv": "en ekonom", "ru": "экономист", "hint": "ударение на последний слог: «экунум»", "ex": "Jag är ekonom.", "exRu": "Я экономист." },
+        { "sv": "en webbdesigner", "ru": "веб-дизайнер", "hint": "как в английском: «вэбдизайнер»", "ex": "Hon jobbar som webbdesigner.", "exRu": "Она работает веб-дизайнером." }
+      ]
+    },
+    {
+      "title": "Вопросы и ответы (стр. 14)",
+      "words": [
+        { "sv": "Jobbar du?", "ru": "Ты работаешь?", "hint": "вопрос без вопросительного слова: глагол на первом месте", "ex": "– Jobbar du? – Ja, jag jobbar på en bank.", "exRu": "— Ты работаешь? — Да, я работаю в банке." },
+        { "sv": "Pluggar du?", "ru": "Ты учишься?", "ex": "– Pluggar du? – Nej, jag pluggar inte.", "exRu": "— Ты учишься? — Нет, не учусь." },
+        { "sv": "Vad pluggar du?", "ru": "Что ты изучаешь? На кого учишься?", "ex": "– Vad pluggar du? – Jag pluggar medicin.", "exRu": "— Что ты изучаешь? — Я изучаю медицину." },
+        { "sv": "att jobba som", "ru": "работать кем-то", "hint": "без артикля: jobba som kock", "ex": "Jag jobbar som servitör.", "exRu": "Я работаю официантом." },
+        { "sv": "att plugga till", "ru": "учиться на кого-то", "hint": "без артикля: plugga till lärare", "ex": "Jag pluggar till förskollärare.", "exRu": "Я учусь на воспитателя." },
+        { "sv": "en förskollärare", "ru": "воспитатель детского сада", "hint": "förskola (детский сад) + lärare", "ex": "Min syster är förskollärare.", "exRu": "Моя сестра — воспитатель в детском саду." },
+        { "sv": "en bank", "ru": "банк", "hint": "jobba på en bank — работать в банке", "ex": "Han jobbar på en bank.", "exRu": "Он работает в банке." },
+        { "sv": "en restaurang", "ru": "ресторан", "hint": "ударение на последний слог; jobba på en restaurang", "ex": "Vi äter på en restaurang i kväll.", "exRu": "Сегодня вечером мы ужинаем в ресторане." },
+        { "sv": "medicin", "ru": "медицина (предмет); лекарство", "hint": "c + i → [с]", "ex": "Hon pluggar medicin i Uppsala.", "exRu": "Она изучает медицину в Уппсале." }
+      ]
+    },
+    {
+      "title": "Слова из заданий учебника",
+      "note": "Эти слова встречаются почти в каждом упражнении.",
+      "words": [
+        { "sv": "att lyssna", "ru": "слушать", "hint": "Lyssna! — Слушайте!", "ex": "Lyssna och svara.", "exRu": "Послушайте и ответьте." },
+        { "sv": "ett ord", "ru": "слово", "hint": "мн. ч. тоже ord", "ex": "Vilka ord hör du?", "exRu": "Какие слова ты слышишь?" },
+        { "sv": "att fråga", "ru": "спрашивать", "hint": "en fråga — вопрос", "ex": "Får jag fråga en sak?", "exRu": "Можно спросить одну вещь?" },
+        { "sv": "varandra", "ru": "друг друга", "ex": "Fråga varandra.", "exRu": "Спросите друг друга." },
+        { "sv": "att kryssa för", "ru": "отметить крестиком", "hint": "ett kryss — крестик", "ex": "Kryssa för rätt alternativ.", "exRu": "Отметьте правильный вариант." },
+        { "sv": "rätt", "ru": "правильный, верно", "hint": "rätt ≠ fel (неправильно)", "ex": "Det är rätt!", "exRu": "Это правильно!" },
+        { "sv": "ett alternativ", "ru": "вариант (ответа)", "hint": "ударение на последний слог", "ex": "Det finns fyra alternativ.", "exRu": "Есть четыре варианта." }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "f",
+      "title": "Упр. F (стр. 14): Vilka ord hör du?",
+      "audio": "rivstart-a1a2-k1-05",
+      "task": "Lyssna. Vilka ord hör du? Kryssa för rätt alternativ.",
+      "taskRu": "Послушайте четыре диалога и отметьте профессии, которые в них звучат. В каждом диалоге их может быть несколько.",
+      "parts": [
+        { "label": "1", "type": "check", "options": ["pensionär", "ingenjör", "kock", "advokat"], "answer": ["pensionär", "kock", "advokat"], "note": "Бывший адвокат теперь на пенсии, а собеседник учится на повара." },
+        { "label": "2", "type": "check", "options": ["ingenjör", "servitör", "lärare", "programmerare"], "answer": ["ingenjör", "lärare", "programmerare"], "note": "Один начинает работать программистом. Другой работает учителем и собирается учиться на инженера." },
+        { "label": "3", "type": "check", "options": ["frisör", "polis", "tandläkare", "ekonom"], "answer": ["frisör", "polis", "ekonom"], "note": "Один хочет стать полицейским. Другой хочет работать экономистом или парикмахером." },
+        { "label": "4", "type": "check", "options": ["sjuksköterska", "läkare", "webbdesigner", "ingenjör"], "answer": ["sjuksköterska", "läkare", "webbdesigner"], "note": "Партнёры обоих — врачи, один из говорящих — медбрат, другой — веб-дизайнер." }
+      ]
+    }
+  ],
+  "drills": [
+    {
+      "title": "Какой предлог?",
+      "items": [
+        { "word": "Jag jobbar ___ en bank.", "focus": "___", "ru": "Я работаю в банке.", "answer": "på", "options": ["på", "som", "med", "till"], "why": "место работы: jobba på en bank / en restaurang" },
+        { "word": "Jag jobbar ___ servitör.", "focus": "___", "ru": "Я работаю официантом.", "answer": "som", "options": ["på", "som", "med", "till"], "why": "должность: jobba som + профессия без артикля" },
+        { "word": "Vad jobbar du ___?", "focus": "___", "ru": "Кем ты работаешь?", "answer": "med", "options": ["på", "som", "med", "till"], "why": "устойчивый вопрос: Vad jobbar du med?" },
+        { "word": "Jag jobbar ___ IT.", "focus": "___", "ru": "Я работаю в IT.", "answer": "med", "options": ["på", "som", "med", "till"], "why": "сфера: jobba med IT / med barn" },
+        { "word": "Jag pluggar ___ universitetet.", "focus": "___", "ru": "Я учусь в университете.", "answer": "på", "options": ["på", "som", "med", "till"], "why": "место учёбы: plugga på universitetet" },
+        { "word": "Jag pluggar ___ förskollärare.", "focus": "___", "ru": "Я учусь на воспитателя.", "answer": "till", "options": ["på", "som", "med", "till"], "why": "на кого учишься: plugga till + профессия" },
+        { "word": "Han jobbar ___ en restaurang.", "focus": "___", "ru": "Он работает в ресторане.", "answer": "på", "options": ["på", "som", "med", "till"], "why": "место работы: jobba på" },
+        { "word": "Hon jobbar ___ ingenjör.", "focus": "___", "ru": "Она работает инженером.", "answer": "som", "options": ["på", "som", "med", "till"], "why": "должность: jobba som" }
+      ]
+    }
+  ]
+}

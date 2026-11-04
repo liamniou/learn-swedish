@@ -26,7 +26,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 
-const emptyState = () => ({ version: 1, resetAt: 0, updatedAt: 0, progress: {}, daily: {}, settings: {}, drills: {} });
+const emptyState = () => ({ version: 1, resetAt: 0, updatedAt: 0, progress: {}, daily: {}, settings: {}, drills: {}, answers: {} });
 let state = emptyState();
 
 async function loadState() {
@@ -97,6 +97,28 @@ function mergeDrills(incoming) {
   return changed;
 }
 
+// Written exercise answers: whole entry per exercise, newest wins.
+const MAX_ANSWER_BYTES = 50 * 1024;
+function mergeAnswers(incoming) {
+  if (!incoming || typeof incoming !== 'object') return false;
+  let changed = false;
+  for (const [key, a] of Object.entries(incoming)) {
+    if (key.length > 300 || !a || typeof a !== 'object' || num(a.t) <= state.resetAt) continue;
+    if (num(a.t) <= num(state.answers[key]?.t)) continue;
+    const entry = {
+      v: a.v && typeof a.v === 'object' ? a.v : {},
+      checked: !!a.checked,
+      score: num(a.score),
+      total: num(a.total),
+      t: num(a.t),
+    };
+    if (JSON.stringify(entry).length > MAX_ANSWER_BYTES) continue;
+    state.answers[key] = entry;
+    changed = true;
+  }
+  return changed;
+}
+
 function mergeDaily(d) {
   if (!d || typeof d.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d.date)) return false;
   const cur = state.daily;
@@ -147,7 +169,7 @@ async function handleApi(req, res, path) {
 
   if (path === '/api/sync' && req.method === 'POST') {
     const body = await readBody(req);
-    const changed = [mergeProgress(body.progress), mergeDaily(body.daily), mergeSettings(body.settings), mergeDrills(body.drills)].some(Boolean);
+    const changed = [mergeProgress(body.progress), mergeDaily(body.daily), mergeSettings(body.settings), mergeDrills(body.drills), mergeAnswers(body.answers)].some(Boolean);
     if (changed) { state.updatedAt = Date.now(); await persist(); }
     return send(res, 200, state);
   }
@@ -160,6 +182,7 @@ async function handleApi(req, res, path) {
     const progress = Object.fromEntries(Object.entries(body.progress || {}).map(([k, p]) => [k, { ...p, t: now + 1 }]));
     mergeProgress(progress);
     mergeDrills(Object.fromEntries(Object.entries(body.drills || {}).map(([k, r]) => [k, { ...r, t: now + 1 }])));
+    mergeAnswers(Object.fromEntries(Object.entries(body.answers || {}).map(([k, a]) => [k, { ...a, t: now + 1 }])));
     mergeDaily(body.daily);
     if (body.settings) mergeSettings({ ...body.settings, t: now });
     await persist();

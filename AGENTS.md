@@ -11,7 +11,7 @@ The user sends homework (links, PDFs, screenshots) about twice a week. Each home
 
 Never rename an existing lesson folder or change an existing word's `sv` value. Progress is keyed by `lessonId/sv`, so a rename resets that word's progress.
 
-Progress is stored server-side (`/api/sync`). Don't change the progress key format or the entry shape (`box`, `due`, `right`, `wrong`, `t`) without migrating `/home/lestar/_volumes/learn-swedish/data/state.json`. Exercise results are keyed by `lessonId#drillTitle` (or `lessonId#id` when the drill has an `id`), so renaming a drill title resets its result. Give a drill an `id` before renaming it.
+Progress is stored server-side (`/api/sync`). Don't change the progress key format or the entry shape (`box`, `due`, `right`, `wrong`, `t`) without migrating `/home/lestar/_volumes/learn-swedish/data/state.json`. Exercise results are keyed by `lessonId#drillTitle` (or `lessonId#id` when the drill has an `id`), so renaming a drill title resets its result. Give a drill an `id` before renaming it. Written exercise answers are keyed by `lessonId#exerciseId`, so never change an exercise `id`.
 
 ## lesson.json
 
@@ -39,6 +39,20 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
       ]
     }
   ],
+  "exercises": [                       // optional written book exercises (answers saved, re-openable)
+    {
+      "id": "f",                       // stable, a-z0-9-
+      "title": "Упр. F (стр. 14): Vilka ord hör du?",
+      "audio": "rivstart-a1a2-k1-05",  // optional player above the task
+      "task": "Lyssna. Vilka ord hör du? Kryssa för rätt alternativ.",  // book instruction (Swedish)
+      "taskRu": "…",
+      "parts": [
+        { "label": "1", "type": "check", "options": ["pensionär", "kock"], "answer": ["kock"], "note": "shown after checking" },
+        { "label": "2", "type": "blanks", "text": "Ravi kommer från {{Indien}}. Han talar {{engelska|English}} och {{}}." },
+        { "label": "3", "type": "write", "prompt": "Skriv 5 exempel med inte.", "rows": 5 }
+      ]
+    }
+  ],
   "drills": [                          // optional multiple-choice drills
     {
       "title": "Как читается выделенное?",
@@ -50,6 +64,14 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
   ]
 }
 ```
+
+Use `exercises` whenever the book task is written (tick, fill in, write). Part types:
+
+- `check`: tick boxes. `answer` lists the correct options.
+- `blanks`: `{{answer|alternative}}` is a checked gap, `{{}}` is a free gap (saved, not checked).
+- `write`: free text, saved, not checked.
+
+Answers autosave as a draft. "Проверить" marks right and wrong answers, and the exercise stays viewable with them until the user edits or clears it.
 
 A drill can be tied to a track: `"audio": "<audio id>"` plus an optional `"intro"`. The player then sits above the questions and keeps playing between them. Use `"ordered": true` so questions follow the recording.
 
@@ -69,7 +91,9 @@ To add a track:
 3. Read the `files.nokportalen.se/audios/transcoded/<uuid>` URL from the page's network requests.
 4. Add it to `audio-sources.json` on eva00 (`ssh lestar@192.168.0.237`).
 
-Track ids: `rivstart-a1a2-k<chapter>-<track, 2 digits>`. The *Hörförståelsetexter* PDF in the extra material has transcripts. Its track numbers can be off by one from the book, so trust the number printed in the book.
+Track ids: `rivstart-a1a2-k<chapter>-<track, 2 digits>`. The track number is the ((N)) printed in the book next to the exercise. The DOM or network order on the Ljudfiler page doesn't match track order. To map a track to its file, hook `HTMLMediaElement.prototype.play` in the page, click that track's play button, and record `currentSrc`.
+
+The *Hörförståelsetexter* PDF in the extra material (Hörförståelsetexter → Ladda ner) has transcripts for checking answers. Its headings are `<textbook section> <exercise letter>`, e.g. `3 F` = section 3, exercise F, not track numbers.
 
 ## Content guidelines
 

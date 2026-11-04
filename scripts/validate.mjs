@@ -34,6 +34,29 @@ for (const id of index.lessons) {
   }
   for (const d of l.drills || []) if (d.audio && !audioIds.has(d.audio)) err(id, `drill "${d.title}" uses unknown audio "${d.audio}"`);
 
+  const exIds = new Set();
+  for (const x of l.exercises || []) {
+    const where = `${id} exercise "${x.id}"`;
+    if (!/^[a-z0-9][a-z0-9-]{0,40}$/.test(x.id || '')) err(where, 'id must be lowercase a-z0-9-');
+    if (exIds.has(x.id)) err(where, 'duplicate exercise id');
+    exIds.add(x.id);
+    if (!x.title) err(where, 'missing title');
+    if (x.audio && !audioIds.has(x.audio)) err(where, `unknown audio "${x.audio}"`);
+    if (!Array.isArray(x.parts) || !x.parts.length) { err(where, 'needs parts'); continue; }
+    for (const [pi, part] of x.parts.entries()) {
+      const w = `${where} part[${pi}]`;
+      if (part.type === 'check') {
+        if (!Array.isArray(part.options) || part.options.length < 2) err(w, 'check needs 2+ options');
+        if (new Set(part.options).size !== part.options?.length) err(w, 'duplicate options');
+        for (const a of part.answer || []) if (!part.options?.includes(a)) err(w, `answer "${a}" not among options`);
+      } else if (part.type === 'blanks') {
+        if (!/\{\{[^}]*\}\}/.test(part.text || '')) err(w, 'blanks text needs at least one {{gap}}');
+      } else if (part.type === 'write') {
+        if (!part.prompt && !part.label) err(w, 'write needs a prompt or label');
+      } else err(w, `unknown part type "${part.type}"`);
+    }
+  }
+
   const seen = new Set();
   for (const [si, s] of (l.sections || []).entries()) {
     const where = `${id} section[${si}] "${s.title}"`;

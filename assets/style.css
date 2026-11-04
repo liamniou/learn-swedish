@@ -164,6 +164,40 @@ select { max-width: 200px; }
 .drill-res { margin-left: 4px; font-size: .82rem; color: var(--muted); font-weight: 600; }
 .drill-res.full { color: var(--good); }
 
+/* Written book exercises */
+.ws h1 { margin-bottom: 0; }
+.ws-task { display: grid; gap: 2px; }
+.ws-parts { display: grid; gap: 12px; }
+.ws-check { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; align-items: center; }
+.ws-check, .ws-blanks, .ws-write {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px;
+}
+.ws-check.ok { border-color: var(--good); }
+.ws-check.bad { border-color: var(--bad); }
+.ws-label { font-weight: 700; grid-column: 1 / -1; color: var(--muted); }
+.ws-opt { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+.ws-opt input { width: 18px; height: 18px; accent-color: var(--primary); }
+.ws-opt.hit { background: var(--good-bg); }
+.ws-opt.false { background: var(--bad-bg); text-decoration: line-through; }
+.ws-opt.miss { border: 1px dashed var(--good); }
+.ws-opt.miss::after { content: "← верно"; font-size: .75rem; color: var(--good); margin-left: auto; }
+.ws-note { grid-column: 1 / -1; font-size: .85rem; color: var(--muted); }
+.ws-blanks { line-height: 2.4; }
+.gap {
+  font: inherit; color: var(--text); background: var(--bg); border: 0; border-bottom: 2px solid var(--border);
+  border-radius: 4px 4px 0 0; padding: 2px 6px; margin: 0 2px; max-width: 100%;
+}
+.gap:focus { outline: none; border-bottom-color: var(--primary); }
+.gap.ok { border-bottom-color: var(--good); background: var(--good-bg); }
+.gap.almost { border-bottom-color: var(--almost); background: var(--almost-bg); }
+.gap.bad { border-bottom-color: var(--bad); background: var(--bad-bg); }
+.gap:disabled, .ws textarea:disabled { color: var(--text); opacity: 1; }
+.gap-key { font-size: .8rem; color: var(--good); font-weight: 600; margin-right: 6px; }
+.ws textarea {
+  width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 10px; resize: vertical; margin-top: 6px;
+}
+
 details.settings { margin-top: 32px; }
 details.settings summary { cursor: pointer; color: var(--muted); }
 details.settings .panel { margin-top: 10px; display: grid; gap: 14px; }
