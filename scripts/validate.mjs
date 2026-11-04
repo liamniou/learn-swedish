@@ -53,6 +53,7 @@ for (const id of index.lessons) {
         if (!/\{\{[^}]*\}\}/.test(part.text || '')) err(w, 'blanks text needs at least one {{gap}}');
       } else if (part.type === 'write') {
         if (!part.prompt && !part.label) err(w, 'write needs a prompt or label');
+        if (part.answer !== undefined && (!Array.isArray(part.answer) || !part.answer.length || part.answer.some(a => typeof a !== 'string' || !a.trim()))) err(w, 'write answer must be a non-empty array of strings');
       } else err(w, `unknown part type "${part.type}"`);
     }
   }
@@ -64,6 +65,7 @@ for (const id of index.lessons) {
     if (!Array.isArray(s.words) || !s.words.length) { err(where, 'needs words'); continue; }
     for (const w of s.words) {
       if (!w.sv || !w.ru) err(where, `word missing sv/ru: ${JSON.stringify(w)}`);
+      if (!w.pron) err(where, `"${w.sv}" needs "pron" (Cyrillic pronunciation, stress with ́)`);
       if (seen.has(w.sv)) err(where, `duplicate word "${w.sv}"`);
       seen.add(w.sv);
       if (w.ex && !w.exRu) err(where, `"${w.sv}" has ex but no exRu`);

@@ -108,6 +108,7 @@ function mergeAnswers(incoming) {
     const entry = {
       v: a.v && typeof a.v === 'object' ? a.v : {},
       checked: !!a.checked,
+      self: a.self && typeof a.self === 'object' ? Object.fromEntries(Object.keys(a.self).filter(k => /^\d+$/.test(k) && a.self[k]).map(k => [k, true])) : {},
       score: num(a.score),
       total: num(a.total),
       t: num(a.t),

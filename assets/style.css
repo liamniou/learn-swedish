@@ -323,3 +323,22 @@ table.words .ex { font-size: .85rem; color: var(--muted); }
 @media (hover: none) { .kbd-help { display: none; } }
 .empty { text-align: center; padding: 40px 20px; }
 .empty .big-emoji { font-size: 3rem; }
+
+/* Pronunciation */
+.pron { font-size: 1.05rem; color: var(--muted); letter-spacing: .02em; }
+.pron-t { font-size: .85rem; color: var(--muted); font-weight: 400; white-space: nowrap; }
+.pron-i { color: var(--muted); font-weight: 400; }
+
+/* Translation / free-text parts */
+.ws-head { display: flex; gap: 8px; align-items: baseline; margin-bottom: 4px; }
+.ws-num { font-weight: 700; color: var(--muted); }
+.ws-prompt { font-weight: 600; }
+.ws-write.ok { border-color: var(--good); }
+.ws-write.almost { border-color: var(--almost); }
+.ws-write.bad { border-color: var(--bad); }
+.ws-mine { background: var(--bg); border-radius: 10px; padding: 8px 10px; margin-top: 6px; white-space: pre-wrap; }
+.ws-model { margin-top: 6px; }
+.diff-x { background: var(--bad-bg); border-radius: 4px; text-decoration: underline wavy var(--bad); text-underline-offset: 3px; }
+.diff-m { background: var(--good-bg); border-radius: 4px; font-weight: 700; }
+.ws-status { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.ws-status .chip { margin-left: auto; }

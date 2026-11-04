@@ -297,9 +297,13 @@ function intervalLabel(c, g) {
 
 // ---------- Shared UI ----------
 
+const pronHTML = (c, cls = 'pron') => c.pron ? `<div class="${cls}" title="Произношение">[${esc(c.pron)}]</div>` : '';
+const pronInline = c => c.pron ? ` <span class="pron-i">[${esc(c.pron)}]</span>` : '';
+
 function frontHTML(c) {
   return `<div class="tag">${esc(c.section)}</div>
     <div class="word" ${svFirst() ? 'lang="sv"' : ''}>${esc(front(c))}</div>
+    ${svFirst() ? pronHTML(c) : ''}
     <div class="tap muted">нажмите, чтобы перевернуть</div>`;
 }
 
@@ -311,6 +315,7 @@ function exampleHTML(c) {
 function backHTML(c) {
   return `<div class="muted">${esc(front(c))}</div>
     <div class="answer" ${svFirst() ? '' : 'lang="sv"'}>${esc(back(c))}</div>
+    ${pronHTML(c)}
     ${c.hint ? `<div class="hint">🗣 ${esc(c.hint)}</div>` : ''}
     ${exampleHTML(c)}`;
 }
@@ -481,7 +486,7 @@ async function lessonPage(id) {
           ${s.note ? `<p class="muted small">${esc(s.note)}</p>` : ''}
           <div class="table-wrap"><table class="words"><tbody>
           ${s.words.map(w => `<tr data-q="${esc((w.sv + ' ' + w.ru).toLowerCase())}">
-            <td lang="sv">${esc(w.sv)}</td>
+            <td><span lang="sv">${esc(w.sv)}</span>${pronHTML(w, 'pron-t')}</td>
             <td>${esc(w.ru)}${w.hint ? `<div class="hint-text">🗣 ${esc(w.hint)}</div>` : ''}</td>
             <td class="ex">${w.ex ? `<span lang="sv"><i>${esc(w.ex)}</i></span><br>${esc(w.exRu)}` : ''}</td>
           </tr>`).join('')}
@@ -671,10 +676,11 @@ function quizPage() {
       label: svFirst() ? 'Выберите перевод' : 'Как сказать по-шведски?',
       lang: svFirst() ? 'sv' : '',
       promptHTML: esc(front(c)),
+      sub: svFirst() && c.pron ? `[${c.pron}]` : '',
       options: shuffle([answer, ...picks]),
       answer,
-      explainHTML: `${c.hint ? `<div class="small">🗣 ${esc(c.hint)}</div>` : ''}${exampleHTML(c)}`,
-      reviewHTML: `<b lang="sv">${esc(c.sv)}</b> — ${esc(c.ru)}`,
+      explainHTML: `<div><b lang="sv">${esc(c.sv)}</b>${pronInline(c)}</div>${c.hint ? `<div class="small">🗣 ${esc(c.hint)}</div>` : ''}${exampleHTML(c)}`,
+      reviewHTML: `<b lang="sv">${esc(c.sv)}</b>${pronInline(c)} — ${esc(c.ru)}`,
       onAnswer: ok => practice(c, ok),
     };
   });
@@ -836,7 +842,7 @@ function typePage() {
       if (r.status !== 'almost') practice(c, r.status === 'ok', 'ru-sv');
       input.readOnly = true;
       $('#fb').innerHTML = `<div class="feedback ${r.status}">
-          <div><b class="${r.status === 'ok' ? 'good-t' : r.status === 'almost' ? 'almost-t' : 'bad-t'}">${esc(r.msg)}</b> <b lang="sv">${esc(c.sv)}</b></div>
+          <div><b class="${r.status === 'ok' ? 'good-t' : r.status === 'almost' ? 'almost-t' : 'bad-t'}">${esc(r.msg)}</b> <b lang="sv">${esc(c.sv)}</b>${pronInline(c)}</div>
           ${c.hint ? `<div class="small">🗣 ${esc(c.hint)}</div>` : ''}
           ${exampleHTML(c)}
         </div>`;
@@ -855,7 +861,7 @@ function typePage() {
     app.innerHTML = `<div class="session"><div class="panel result">
       <div class="big-emoji">${score === items.length ? '🏆' : '✍️'}</div>
       <div class="score">${score} / ${items.length}</div>
-      ${wrong.length ? `<div class="mistakes"><b>Повторите:</b><ul>${wrong.map(c => `<li><b lang="sv">${esc(c.sv)}</b> — ${esc(c.ru)}</li>`).join('')}</ul></div>` : ''}
+      ${wrong.length ? `<div class="mistakes"><b>Повторите:</b><ul>${wrong.map(c => `<li><b lang="sv">${esc(c.sv)}</b>${pronInline(c)} — ${esc(c.ru)}</li>`).join('')}</ul></div>` : ''}
       <div class="row center" style="margin-top:16px">
         <button class="btn primary" id="again">Ещё раз</button>
         <a class="btn" href="#/">На главную</a>
@@ -869,7 +875,8 @@ function typePage() {
 // ---------- Router & header ----------
 
 // ---------- Written book exercises ----------
-// Part types: "check" (tick boxes), "blanks" (text with {{answer|alt}} gaps; {{}} = free gap), "write" (free text).
+// Part types: "check" (tick boxes), "blanks" (text with {{answer|alt}} gaps; {{}} = free gap),
+// "write" (free text; with `answer` variants it is compared to a model and can be self-credited).
 // Answers autosave to the server and stay viewable after checking.
 
 const exKey = (l, x) => `${l.id}#${x.id}`;
@@ -895,8 +902,60 @@ function gapStatus(value, alts) {
   return 'bad';
 }
 
+const normSentence = s => norm(String(s || '').replace(/[–—-]/g, ' ')).replace(/\bidag\b/g, 'i dag');
+const tokens = s => normSentence(s).split(' ').filter(Boolean);
+
+function levenshtein(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// Picks the model variant closest to the user's answer (character edit distance).
+function closestVariant(value, variants) {
+  const v = normSentence(value);
+  let best = variants[0], bestDist = Infinity;
+  for (const m of variants) {
+    const d = levenshtein(v, normSentence(m));
+    if (d < bestDist) { best = m; bestDist = d; }
+  }
+  return best;
+}
+
+function writeStatus(value, variants) {
+  const v = normSentence(value);
+  if (!v) return 'empty';
+  const keys = variants.map(normSentence);
+  if (keys.includes(v)) return 'ok';
+  if (keys.map(fold).includes(fold(v))) return 'almost';
+  return 'compare';
+}
+
+// Highlights words in `text` that are not part of the longest common word sequence with `other`,
+// so wrong, missing and misplaced words all show up.
+function diffHTML(text, other, cls) {
+  const parts = String(text || '').split(/(\s+)/);
+  const idx = [], a = [];
+  parts.forEach((p, k) => { const t = normSentence(p); if (t) { idx.push(k); a.push(t); } });
+  const b = tokens(other);
+  const L = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  }
+  const keep = new Set();
+  for (let i = 0, j = 0; i < a.length && j < b.length;) {
+    if (a[i] === b[j]) { keep.add(idx[i]); i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+  }
+  return parts.map((p, k) => !p.trim() || keep.has(k) || !normSentence(p) ? esc(p) : `<span class="${cls}">${esc(p)}</span>`).join('');
+}
+
 // Returns per-part marks plus score/total; parts without an answer key are not scored.
-function gradeExercise(x, values) {
+// `self` holds parts the user credited as correct after comparing with the model answer.
+function gradeExercise(x, values, self = {}) {
   let score = 0, total = 0;
   const marks = x.parts.map((part, i) => {
     const v = values[i];
@@ -916,6 +975,12 @@ function gradeExercise(x, values) {
         return st;
       });
       return { gaps };
+    }
+    if (part.type === 'write' && part.answer?.length) {
+      const status = writeStatus(v, part.answer);
+      const credited = status === 'ok' || (!!self[i] && status !== 'empty');
+      total++; if (credited) score++;
+      return { status, credited, model: closestVariant(v, part.answer) };
     }
     return {};
   });
@@ -951,8 +1016,25 @@ function partHTML(part, i, value, mark, locked) {
     return `<div class="ws-part ws-blanks">${part.label ? `<span class="ws-label">${esc(part.label)}</span> ` : ''}<span lang="sv">${html}</span>
       ${mark && part.note ? `<div class="ws-note">${esc(part.note)}</div>` : ''}</div>`;
   }
+  const head = `<div class="ws-head">${part.label ? `<span class="ws-num">${esc(part.label)}</span>` : ''}${part.prompt ? `<span class="ws-prompt">${esc(part.prompt)}</span>` : ''}</div>`;
+  if (locked && mark?.status) {
+    const others = part.answer.filter(a => a !== mark.model);
+    const statusLabel = { ok: '✓ Верно', almost: 'Почти: проверьте å, ä, ö', compare: 'Сравните с образцом', empty: 'Нет ответа' }[mark.status];
+    const cls = mark.credited ? 'ok' : mark.status === 'empty' ? 'bad' : 'almost';
+    return `<div class="ws-part ws-write ${cls}">
+      ${head}
+      <div class="ws-mine" lang="sv">${mark.status === 'empty' ? '<span class="muted">—</span>' : mark.status === 'ok' ? esc(value) : diffHTML(value, mark.model, 'diff-x')}</div>
+      ${mark.status !== 'ok' ? `<div class="ws-model"><span class="muted small">Образец:</span> <span lang="sv">${mark.status === 'empty' ? esc(mark.model) : diffHTML(mark.model, value, 'diff-m')}</span></div>` : ''}
+      ${others.length && mark.status !== 'ok' ? `<div class="ws-model small muted">Также верно: <span lang="sv">${others.map(esc).join(' · ')}</span></div>` : ''}
+      ${part.note ? `<div class="ws-note">${esc(part.note)}</div>` : ''}
+      <div class="ws-status">
+        <span class="small ${mark.credited ? 'good-t' : 'muted'}">${mark.credited && mark.status !== 'ok' ? '✓ Засчитано' : statusLabel}</span>
+        ${mark.status !== 'ok' && mark.status !== 'empty' ? `<button type="button" class="chip ws-credit" data-part="${i}">${mark.credited ? 'Отменить' : '✓ Засчитать'}</button>` : ''}
+      </div>
+    </div>`;
+  }
   return `<div class="ws-part ws-write">
-    ${part.label || part.prompt ? `<div class="ws-label">${esc([part.label, part.prompt].filter(Boolean).join(' '))}</div>` : ''}
+    ${head}
     <textarea data-part="${i}" rows="${part.rows || 4}" lang="sv" spellcheck="false" ${dis}>${esc(value || '')}</textarea>
   </div>`;
 }
@@ -1001,7 +1083,7 @@ function exercisePage(lessonId, exId) {
   const render = () => {
     const a = answers[key];
     const locked = !!a?.checked;
-    const g = locked ? gradeExercise(x, a.v || {}) : null;
+    const g = locked ? gradeExercise(x, a.v || {}, a.self || {}) : null;
     form.innerHTML = x.parts.map((p, i) => partHTML(p, i, a?.v?.[i], g?.marks[i], locked)).join('');
     if ($('#ws-letters')) $('#ws-letters').hidden = locked;
     $('#ws-result').innerHTML = !locked ? '' : g.total
@@ -1018,6 +1100,13 @@ function exercisePage(lessonId, exId) {
          <span class="small muted" id="ws-saved">${hasAnswers(a) ? 'Черновик сохранён' : ''}</span>`;
 
     if (locked) {
+      $$('.ws-credit', form).forEach(b => b.onclick = () => {
+        const self = { ...(a.self || {}) };
+        if (self[b.dataset.part]) delete self[b.dataset.part]; else self[b.dataset.part] = true;
+        const { score, total } = gradeExercise(x, a.v || {}, self);
+        save({ ...a, self, score, total });
+        render();
+      });
       $('#ws-edit').onclick = () => { save({ v: a.v, checked: false }); render(); };
       $('#ws-clear').onclick = () => {
         if (!confirm('Удалить ваши ответы и начать заново?')) return;

@@ -32,6 +32,7 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
         {
           "sv": "ett hjärta",          // nouns WITH en/ett, verbs WITH att
           "ru": "сердце",
+          "pron": "йэ́(р)та",           // REQUIRED: Cyrillic pronunciation, stress with ́
           "hint": "hj → [й]",          // optional pronunciation or grammar hint
           "ex": "Mitt hjärta slår snabbt.",  // optional example sentence (simple, correct Swedish)
           "exRu": "Моё сердце бьётся быстро."
@@ -49,7 +50,9 @@ Progress is stored server-side (`/api/sync`). Don't change the progress key form
       "parts": [
         { "label": "1", "type": "check", "options": ["pensionär", "kock"], "answer": ["kock"], "note": "shown after checking" },
         { "label": "2", "type": "blanks", "text": "Ravi kommer från {{Indien}}. Han talar {{engelska|English}} och {{}}." },
-        { "label": "3", "type": "write", "prompt": "Skriv 5 exempel med inte.", "rows": 5 }
+        { "label": "3", "type": "write", "prompt": "Skriv 5 exempel med inte.", "rows": 5 },
+        { "label": "4", "type": "write", "prompt": "Я не понимаю учителя.", "rows": 2,
+          "answer": ["Jag förstår inte läraren.", "Jag förstår inte min lärare."], "note": "…" }
       ]
     }
   ],
@@ -69,7 +72,7 @@ Use `exercises` whenever the book task is written (tick, fill in, write). Part t
 
 - `check`: tick boxes. `answer` lists the correct options.
 - `blanks`: `{{answer|alternative}}` is a checked gap, `{{}}` is a free gap (saved, not checked).
-- `write`: free text, saved, not checked.
+- `write`: free text. Without `answer` it's only saved. With `answer` (model variants, e.g. translations) the answer is compared with the closest variant. An exact match (ignoring case and punctuation, `idag` = `i dag`) is counted. Otherwise the differing words are highlighted and the user can press «Засчитать». List all reasonable variants, and in `note` explain grammar the learner hasn't covered yet (e.g. definite forms).
 
 Answers autosave as a draft. "Проверить" marks right and wrong answers, and the exercise stays viewable with them until the user edits or clears it.
 
@@ -96,6 +99,10 @@ Track ids: `rivstart-a1a2-k<chapter>-<track, 2 digits>`. The track number is the
 The *Hörförståelsetexter* PDF in the extra material (Hörförståelsetexter → Ladda ner) has transcripts for checking answers. Its headings are `<textbook section> <exercise letter>`, e.g. `3 F` = section 3, exercise F, not track numbers.
 
 ## Content guidelines
+
+- **Every word needs `pron`**, its pronunciation in Cyrillic (the validator enforces it). Mark stress with a combining acute (U+0301) on multi-syllable words. Use [ɧ] for the sj sound, [щ] for the tj sound, [ŋ] for ng, `(р)` for the near-silent r in rn/rt/rd/rl, and ш for rs. Write long u as ю and short u as у. Long o is usually у, but loanwords like ekonom use о. Check rules before writing a hint: dj/gj/lj/hj → [й] only at the start of a word.
+- Verbs go in as `att` + infinitive, with the present form and its pronunciation in `hint` (`jag bor [бур]`).
+- `scripts/format-lessons.py lessons/*/lesson.json` keeps lesson files at one line per word, item or part.
 
 - Translations and all UI text are in **Russian**.
 - Include every word from the homework. Skip words that already exist in earlier lessons unless they're the point of the exercise.
