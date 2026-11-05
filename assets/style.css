@@ -342,3 +342,39 @@ table.words .ex { font-size: .85rem; color: var(--muted); }
 .diff-m { background: var(--good-bg); border-radius: 4px; font-weight: 700; }
 .ws-status { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 .ws-status .chip { margin-left: auto; }
+
+/* Users & login */
+body.locked .nav, body.locked .filters { display: none; }
+.user-chip { font-weight: 500; }
+.login { max-width: 420px; margin: 24px auto; text-align: center; display: grid; gap: 14px; justify-items: center; }
+.login h1 { margin: 0; }
+.login-flag .flag { width: 48px; height: 31px; border-radius: 5px;
+  background:
+    linear-gradient(to right, transparent 15px, var(--accent) 15px, var(--accent) 22px, transparent 22px),
+    linear-gradient(to bottom, transparent 12px, var(--accent) 12px, var(--accent) 19px, transparent 19px),
+    #006aa7; }
+.login-users { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.login-user {
+  font: inherit; cursor: pointer; display: grid; justify-items: center; gap: 6px; min-width: 110px;
+  padding: 14px 18px; border-radius: 16px; border: 2px solid var(--border); background: var(--card); color: var(--text);
+}
+.login-user:hover { border-color: var(--primary); }
+.login-user.active { border-color: var(--primary); background: var(--soft); }
+.avatar {
+  width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--primary); color: var(--on-primary); font-size: 1.4rem; font-weight: 700;
+}
+.pin-label { color: var(--muted); }
+.pin-dots { display: flex; gap: 14px; }
+.pin-dots i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--muted); }
+.pin-dots i.on { background: var(--primary); border-color: var(--primary); }
+.pin-dots.shake { animation: shake .35s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.pin-error { min-height: 1.4em; color: var(--bad); font-weight: 600; }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-pad button {
+  font: inherit; font-size: 1.5rem; height: 64px; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+}
+.pin-pad button:hover:not(:disabled) { background: var(--soft); }
+.pin-pad button:disabled { opacity: .5; }

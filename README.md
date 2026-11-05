@@ -8,18 +8,20 @@ Features: flip cards (sv ↔ ru), spaced-repetition review, multiple-choice quiz
 
 - The frontend is plain HTML, CSS and JS (`index.html`, `assets/`, `lessons/`). There is no build step.
 - `server/server.mjs` is a dependency-free Node server. It serves the frontend and stores progress in `$DATA_DIR/state.json`, with daily snapshots `state-YYYY-MM-DD.json` (the last 30 are kept).
-- The browser keeps a localStorage cache and syncs through `POST /api/sync`. Every card entry has a timestamp, and the newest one wins, so several devices can be used at once. Changes made offline are queued and sent once the server is reachable. The cloud icon in the header shows sync status.
+- Users log in with a name and PIN. Users are configured in `data/users.json` on the server, not in git. Sessions are HMAC-signed cookies valid for a year. Each user has separate progress in `data/users/<id>/`.
+- The browser keeps a per-user localStorage cache and syncs through `POST /api/sync`. Every card entry has a timestamp, and the newest one wins, so several devices can be used at once. Changes made offline are queued and sent once the server is reachable. The cloud icon in the header shows sync status.
 - A word counts as learned at spaced-repetition level 2. Answers in Тест and Написание also feed spaced repetition: a mistake sends the word back to review, and a correct answer counts if the word is new or due.
 - The best and last score of each exercise are saved and shown on the lesson card and page.
 - Import and reset (in the home page settings) replace the server state for all devices.
 
-API: `GET /api/health`, `GET /api/state`, `POST /api/sync`, `PUT /api/state`, `GET /api/audio/<id>`.
+API: public `GET /api/health`, `GET /api/users`, `POST /api/login`, `POST /api/logout`. With a session: `GET /api/me`, `GET /api/state`, `POST /api/sync`, `PUT /api/state`, `GET /api/audio/<id>`.
 
 Lesson audio plays inside the portal. Track ids map to files or upstream URLs in the private data folder, never in git (see [AGENTS.md](AGENTS.md)).
 
 ## Run locally
 
 ```bash
+mkdir -p data && echo '{"users":[{"id":"dev","name":"Dev","pin":"0000"}]}' > data/users.json
 node server/server.mjs        # http://localhost:8080, data in ./data
 node scripts/validate.mjs     # check lesson files
 ```

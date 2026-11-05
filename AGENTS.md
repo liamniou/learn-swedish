@@ -11,7 +11,21 @@ The user sends homework (links, PDFs, screenshots) about twice a week. Each home
 
 Never rename an existing lesson folder or change an existing word's `sv` value. Progress is keyed by `lessonId/sv`, so a rename resets that word's progress.
 
-Progress is stored server-side (`/api/sync`). Don't change the progress key format or the entry shape (`box`, `due`, `right`, `wrong`, `t`) without migrating `/home/lestar/_volumes/learn-swedish/data/state.json`. Exercise results are keyed by `lessonId#drillTitle` (or `lessonId#id` when the drill has an `id`), so renaming a drill title resets its result. Give a drill an `id` before renaming it. Written exercise answers are keyed by `lessonId#exerciseId`, so never change an exercise `id`.
+Progress is stored server-side (`/api/sync`). Don't change the progress key format or the entry shape (`box`, `due`, `right`, `wrong`, `t`) without migrating every `/home/lestar/_volumes/learn-swedish/data/users/<id>/state.json`. Exercise results are keyed by `lessonId#drillTitle` (or `lessonId#id` when the drill has an `id`), so renaming a drill title resets its result. Give a drill an `id` before renaming it. Written exercise answers are keyed by `lessonId#exerciseId`, so never change an exercise `id`.
+
+## Users
+
+Users and PINs live only on eva00 in `/home/lestar/_volumes/learn-swedish/data/users.json`, never in git (the repo, image and gitops repo are all public):
+
+```json
+{ "users": [ { "id": "stas", "name": "Stas", "pin": "1234" }, { "id": "marina", "name": "Marina", "pin": "5678" } ] }
+```
+
+- `id` is lowercase a-z0-9-, `pin` is 4–8 digits. The server re-reads the file when it changes, so no restart is needed.
+- Changing a PIN logs that user out on all devices. Removing a user blocks login but keeps `data/users/<id>/`.
+- Each user's progress is in `data/users/<id>/state.json`, with daily snapshots next to it. The pre-users `data/state.json` was migrated to the first user (`stas`) and kept as `state.legacy.json`.
+- `data/session-secret` signs login cookies. Deleting it logs everyone out.
+- After 5 wrong PINs from one IP, login is locked, starting at 30 s and growing to 15 min.
 
 ## lesson.json
 

@@ -11,23 +11,44 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const app = $('#app');
 
+// localStorage cache, namespaced per user (`u:<id>:` prefix) so several people can share a device.
 const store = {
-  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
-  set(k, v) { localStorage.setItem(k, JSON.stringify(v)); },
+  ns: '',
+  get(k, d) { try { return JSON.parse(localStorage.getItem(this.ns + k)) ?? d; } catch { return d; } },
+  set(k, v) { localStorage.setItem(this.ns + k, JSON.stringify(v)); },
+  remove(k) { localStorage.removeItem(this.ns + k); },
 };
+const LAST_USER = 'sv.lastUser';
 
+let currentUser = null;
 let lessons = [];
 let cards = [];
-let progress = store.get(KEYS.progress, {});
+let progress = {};
 // Exercise results per drill: { last, best, total, runs, t }.
-let drillResults = store.get(KEYS.drills, {});
+let drillResults = {};
 const saveDrills = () => store.set(KEYS.drills, drillResults);
 // Written book exercises: { v: {partIdx: value}, checked, score, total, t }.
-let answers = store.get(KEYS.answers, {});
+let answers = {};
 const saveAnswers = () => store.set(KEYS.answers, answers);
-const settings = Object.assign({ dir: 'sv-ru', lesson: 'all', newPerDay: 20, newPerDayT: 0 }, store.get(KEYS.settings, {}));
+let settings = {};
 const saveSettings = () => store.set(KEYS.settings, settings);
 const saveProgress = () => store.set(KEYS.progress, progress);
+
+function useUser(u) {
+  currentUser = u;
+  store.ns = u ? `u:${u.id}:` : '';
+  progress = u ? store.get(KEYS.progress, {}) : {};
+  drillResults = u ? store.get(KEYS.drills, {}) : {};
+  answers = u ? store.get(KEYS.answers, {}) : {};
+  settings = Object.assign({ dir: 'sv-ru', lesson: 'all', newPerDay: 20, newPerDayT: 0 }, u ? store.get(KEYS.settings, {}) : {});
+  clearTimeout(sync.timer);
+  sync.pending = new Set(u ? store.get(KEYS.pending, []) : []);
+  sync.setStatus('idle');
+  if (u) localStorage.setItem(LAST_USER, JSON.stringify(u));
+  else localStorage.removeItem(LAST_USER);
+  // Pre-login caches were shared by everyone on the device; the server copy is authoritative.
+  for (const k of Object.values(KEYS)) localStorage.removeItem(k);
+}
 
 let onKey = null;
 
@@ -54,7 +75,7 @@ const saveDaily = d => { store.set(KEYS.daily, d); sync.push(); };
 // Each progress entry carries a timestamp `t`; both sides keep the newest per card.
 const sync = {
   status: 'idle', // idle | syncing | ok | offline | error
-  pending: new Set(store.get(KEYS.pending, [])),
+  pending: new Set(),
   timer: null,
   inflight: null,
 
@@ -70,12 +91,14 @@ const sync = {
   },
 
   async run({ full = false } = {}) {
+    if (!currentUser) return false;
     if (this.inflight) { await this.inflight; if (!full && !this.pending.size) return; }
     this.inflight = this._run(full).finally(() => { this.inflight = null; });
     return this.inflight;
   },
 
   async _run(full) {
+    const user = currentUser;
     const keys = full ? Object.keys(progress) : [...this.pending];
     const body = {
       progress: Object.fromEntries(keys.filter(k => progress[k]).map(k => [k, progress[k]])),
@@ -87,8 +110,10 @@ const sync = {
     this.setStatus('syncing');
     try {
       const r = await fetch('api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (r.status === 401) { sessionExpired(); return false; }
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const server = await r.json();
+      if (currentUser !== user) return false;
       keys.forEach(k => this.pending.delete(k));
       store.set(KEYS.pending, [...this.pending]);
       this.apply(server);
@@ -138,6 +163,7 @@ const sync = {
 
   async replace(data) {
     const r = await fetch('api/state', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (r.status === 401) { sessionExpired(); throw new Error('нужно войти заново'); }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const server = await r.json();
     progress = {};
@@ -145,7 +171,7 @@ const sync = {
     answers = {};
     this.pending.clear();
     store.set(KEYS.pending, []);
-    localStorage.removeItem(KEYS.daily);
+    store.remove(KEYS.daily);
     this.apply(server);
   },
 
@@ -168,7 +194,7 @@ const sync = {
 
 window.addEventListener('online', () => sync.push(0));
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') sync.run().then(ok => ok && refreshIdle());
+  if (document.visibilityState === 'visible' && currentUser) sync.run().then(ok => ok && refreshIdle());
 });
 // Re-render passive pages after a background sync brought in changes from another device.
 function refreshIdle() {
@@ -417,7 +443,7 @@ function home() {
   };
   $('#export').onclick = () => {
     const blob = new Blob([JSON.stringify({ progress, drills: drillResults, answers, settings: { newPerDay: settings.newPerDay }, daily: daily() }, null, 1)], { type: 'application/json' });
-    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `svenska-progress-${today()}.json` });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `svenska-progress-${currentUser.id}-${today()}.json` });
     a.click(); URL.revokeObjectURL(a.href);
   };
   $('#import').onchange = async e => {
@@ -1155,6 +1181,7 @@ const routes = { '': home, lesson: lessonPage, cards: cardsPage, review: reviewP
 
 function route() {
   onKey = null;
+  if (!currentUser) return loginPage();
   const [name = '', ...args] = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
   $$('.nav a').forEach(a => a.classList.toggle('active', a.dataset.route === name));
   (routes[name] || home)(...args);
@@ -1167,6 +1194,110 @@ function syncHeader() {
     [...lessons].reverse().map(l => `<option value="${esc(l.id)}">${esc(l.title)}</option>`).join('');
   sel.value = settings.lesson;
   $('#dir-toggle').textContent = svFirst() ? 'SV → RU' : 'RU → SV';
+  $('#user').textContent = currentUser ? `👤 ${currentUser.name}` : '';
+  $('#user').title = currentUser ? `${currentUser.name} — выйти` : '';
+  document.body.classList.toggle('locked', !currentUser);
+}
+
+// ---------- Login ----------
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  return { status: r.status, ok: r.ok, data };
+}
+
+function sessionExpired() {
+  if (!currentUser) return;
+  useUser(null);
+  syncHeader();
+  loginPage('Сессия закончилась — войдите снова.');
+}
+
+async function logout() {
+  if (!confirm(`Выйти из профиля ${currentUser.name}?`)) return;
+  await fetch('api/logout', { method: 'POST' }).catch(() => {});
+  useUser(null);
+  history.replaceState(null, '', '#/');
+  syncHeader();
+  loginPage();
+}
+
+async function loginPage(message = '') {
+  onKey = null;
+  syncHeader();
+  app.innerHTML = '<p class="muted">Загрузка…</p>';
+  let list;
+  try {
+    const r = await api('api/users');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    list = r.data;
+  } catch {
+    app.innerHTML = '<div class="panel empty"><div class="big-emoji">📡</div><h2>Нет связи с сервером</h2><p class="muted">Проверьте подключение и обновите страницу.</p></div>';
+    return;
+  }
+  if (!list.length) {
+    app.innerHTML = '<div class="panel empty"><div class="big-emoji">🔒</div><h2>Нет пользователей</h2><p class="muted">Добавьте пользователей в users.json на сервере.</p></div>';
+    return;
+  }
+
+  let picked = list.length === 1 ? list[0] : null;
+  let pin = '';
+  let busy = false;
+  const render = (error = '') => {
+    app.innerHTML = `<div class="login panel">
+      <div class="login-flag"><span class="flag"></span></div>
+      <h1>Hej! Кто учится?</h1>
+      ${message ? `<p class="muted">${esc(message)}</p>` : ''}
+      <div class="login-users">${list.map(u => `<button class="login-user${picked?.id === u.id ? ' active' : ''}" data-id="${esc(u.id)}" type="button">
+        <span class="avatar">${esc(u.name[0].toUpperCase())}</span><span>${esc(u.name)}</span></button>`).join('')}</div>
+      ${picked ? `<div class="pin-label">PIN для ${esc(picked.name)}</div>
+        <div class="pin-dots" aria-label="Введено ${pin.length} из ${picked.pinLength}">${Array.from({ length: picked.pinLength }, (_, i) => `<i class="${i < pin.length ? 'on' : ''}"></i>`).join('')}</div>
+        <div class="pin-error" role="alert">${esc(error)}</div>
+        <div class="pin-pad">${['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map(k => k
+          ? `<button type="button" data-k="${k}" ${busy ? 'disabled' : ''}>${k}</button>` : '<span></span>').join('')}</div>` : ''}
+    </div>`;
+    $$('.login-user').forEach(b => b.onclick = () => { picked = list.find(u => u.id === b.dataset.id); pin = ''; render(); });
+    $$('.pin-pad button').forEach(b => {
+      b.onmousedown = e => e.preventDefault();
+      b.onclick = () => press(b.dataset.k);
+    });
+  };
+  const press = k => {
+    if (!picked || busy) return;
+    if (k === '⌫') pin = pin.slice(0, -1);
+    else if (/^\d$/.test(k) && pin.length < picked.pinLength) pin += k;
+    render();
+    if (pin.length === picked.pinLength) submit();
+  };
+  const submit = async () => {
+    busy = true;
+    render();
+    let r;
+    try { r = await api('api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: picked.id, pin }) }); }
+    catch { r = { status: 0, data: {} }; }
+    busy = false;
+    pin = '';
+    if (r.ok) return startSession(r.data);
+    render(r.status === 429 ? `Слишком много попыток. Подождите ${Math.ceil((r.data.retryAfter || 60) / 60)} мин.`
+      : r.status === 401 ? 'Неверный PIN' : 'Нет связи с сервером');
+    $('.pin-dots')?.classList.add('shake');
+  };
+  onKey = e => {
+    if (/^\d$/.test(e.key)) press(e.key);
+    else if (e.key === 'Backspace') press('⌫');
+  };
+  render();
+}
+
+async function startSession(user) {
+  useUser(user);
+  syncHeader();
+  // Wait briefly for server progress so the first screen shows the right counts.
+  const first = sync.run({ full: true });
+  const settled = await Promise.race([first.then(() => true), new Promise(r => setTimeout(r, 2500, false))]);
+  route();
+  if (!settled) first.then(ok => ok && refreshIdle());
 }
 
 document.addEventListener('keydown', e => {
@@ -1192,13 +1323,20 @@ document.addEventListener('keydown', e => {
       <p class="small muted">Локально запустите сервер: <code>node server/server.mjs</code></p></div>`;
     return;
   }
-  syncHeader();
   $('#lesson-filter').onchange = e => { settings.lesson = e.target.value; saveSettings(); route(); };
   $('#dir-toggle').onclick = () => { settings.dir = svFirst() ? 'ru-sv' : 'sv-ru'; saveSettings(); syncHeader(); route(); };
+  $('#user').onclick = logout;
   window.addEventListener('hashchange', route);
-  // Wait briefly for server progress so the first screen shows the right counts.
-  const first = sync.run({ full: true });
-  const settled = await Promise.race([first.then(() => true), new Promise(r => setTimeout(r, 2500, false))]);
-  route();
-  if (!settled) first.then(ok => ok && refreshIdle());
+
+  let me = null;
+  try {
+    const r = await api('api/me');
+    if (r.ok) me = r.data;
+  } catch {
+    // Offline: keep working from the last user's local cache; sync resumes when the server is back.
+    try { me = JSON.parse(localStorage.getItem(LAST_USER)); } catch { me = null; }
+  }
+  if (me) return startSession(me);
+  useUser(null);
+  loginPage();
 })();
