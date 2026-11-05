@@ -1,0 +1,61 @@
+{
+  "title": "Перевод: работа и учёба",
+  "titleSv": "Översättning",
+  "date": "2026-11-04",
+  "summary": "Слова из домашнего задания и перевод 10 предложений на шведский: кто где живёт, работает и учится.",
+  "sources": [
+    {"label": "Предложения на перевод (вариант 1), домашнее задание"},
+    {"label": "Список слов из домашнего задания"}
+  ],
+  "sections": [
+    {
+      "title": "Слова из домашнего задания",
+      "note": "ganska, jätte-, att göra (gör) и att ha (har) есть в уроке «Правила чтения», varandra — в уроке «Профессии».",
+      "words": [
+        {"sv": "Jag är lärare", "ru": "Я учитель", "pron": "я э лэ́раре", "hint": "профессия без артикля: не «en lärare»"},
+        {"sv": "Jag jobbar som läkare", "ru": "Я работаю врачом", "pron": "я йо́ббар сом лэ́каре", "hint": "jobba som + профессия без артикля"},
+        {"sv": "att bo", "ru": "жить, проживать", "pron": "бу", "hint": "jag bor [бур] — я живу", "ex": "Jag bor i Stockholm.", "exRu": "Я живу в Стокгольме."},
+        {"sv": "hemma", "ru": "дома", "pron": "хе́мма", "ex": "Är du hemma i kväll?", "exRu": "Ты дома сегодня вечером?"},
+        {"sv": "att gå", "ru": "идти, ходить", "pron": "го", "hint": "jag går [гор] — я иду; gå i skolan — ходить в школу", "ex": "Barnen går i skolan.", "exRu": "Дети ходят в школу."},
+        {"sv": "att tro", "ru": "думать, полагать, считать", "pron": "тру", "hint": "jag tror [трур] — я думаю", "ex": "Jag tror det.", "exRu": "Думаю, да."},
+        {"sv": "duktig", "ru": "способный, умелый, молодец", "pron": "ду́кти(г)", "hint": "-ig на конце: g почти не слышна; jätteduktig — очень способный", "ex": "Hon är jätteduktig på svenska.", "exRu": "Она очень хорошо знает шведский."},
+        {"sv": "en särbo", "ru": "партнёр, с которым в отношениях, но живут отдельно", "pron": "сэ́рбу", "hint": "sär (отдельно) + bo (жить); ср. en sambo — живут вместе", "ex": "Min särbo bor i Göteborg.", "exRu": "Мой партнёр живёт в Гётеборге (мы живём раздельно)."},
+        {"sv": "själv", "ru": "сам, самостоятельно; один", "pron": "ɧэльв", "hint": "sj → [ɧ]", "ex": "Jag bor själv.", "exRu": "Я живу один."},
+        {"sv": "ihop", "ru": "вместе", "pron": "иху́п", "hint": "= tillsammans", "ex": "Vi pluggar ihop.", "exRu": "Мы учимся вместе."}
+      ]
+    },
+    {
+      "title": "Для перевода",
+      "note": "Слова, которые понадобятся в упражнении «Перевод».",
+      "words": [
+        {"sv": "var", "ru": "где", "pron": "ва(р)", "hint": "var? — где?, varifrån? — откуда?", "ex": "Var bor du?", "exRu": "Где ты живёшь?"},
+        {"sv": "att ligga", "ru": "находиться (о городах, странах); лежать", "pron": "ли́гга", "hint": "ligger — находится", "ex": "Stockholm ligger i Sverige.", "exRu": "Стокгольм находится в Швеции."},
+        {"sv": "ett språk", "ru": "язык", "pron": "спрок", "hint": "мн. ч. тоже språk", "ex": "Hur många språk talar du?", "exRu": "На скольких языках ты говоришь?"},
+        {"sv": "en vän", "ru": "друг", "pron": "вэн", "hint": "мн. ч. vänner; разг. en kompis", "ex": "Min vän heter Anna.", "exRu": "Мою подругу зовут Анна."},
+        {"sv": "i dag", "ru": "сегодня", "pron": "и да́(г)", "hint": "пишется раздельно, но idag тоже встречается", "ex": "Vad gör du i dag?", "exRu": "Что ты делаешь сегодня?"},
+        {"sv": "nu", "ru": "сейчас", "pron": "ню", "ex": "Jag bor i Sverige nu.", "exRu": "Сейчас я живу в Швеции."},
+        {"sv": "också", "ru": "тоже, также", "pron": "о́кса", "hint": "ck + s → [кс]", "ex": "Jag talar också engelska.", "exRu": "Я также говорю по-английски."}
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "oversattning-1",
+      "title": "Перевод (вариант 1)",
+      "task": "Översätt till svenska.",
+      "taskRu": "Переведите на шведский. После проверки вы увидите образец. Если ваш вариант тоже правильный, нажмите «Засчитать». Новые слова есть в разделе «Для перевода».",
+      "parts": [
+        {"label": "1", "type": "write", "rows": 2, "prompt": "Я не понимаю учителя.", "answer": ["Jag förstår inte läraren.", "Jag förstår inte min lärare."], "note": "läraren — «этот учитель»: окончание -en у en-слов — определённая форма, её проходят позже. inte — сразу после глагола."},
+        {"label": "2", "type": "write", "rows": 3, "prompt": "Ты изучаешь медицину? Нет, я не изучаю медицину. Я изучаю языки.", "answer": ["Pluggar du medicin? Nej, jag pluggar inte medicin. Jag pluggar språk.", "Studerar du medicin? Nej, jag studerar inte medicin. Jag studerar språk."], "note": "Вопрос без вопросительного слова начинается с глагола. språk во мн. ч. не меняется."},
+        {"label": "3", "type": "write", "rows": 2, "prompt": "Мы учимся вместе.", "answer": ["Vi pluggar ihop.", "Vi pluggar tillsammans.", "Vi studerar ihop.", "Vi studerar tillsammans."], "note": "ihop = tillsammans — вместе."},
+        {"label": "4", "type": "write", "rows": 2, "prompt": "Где находится Париж? Париж находится во Франции.", "answer": ["Var ligger Paris? Paris ligger i Frankrike."], "note": "О городах и странах «находится» = ligger. Франция — Frankrike."},
+        {"label": "5", "type": "write", "rows": 2, "prompt": "Я из Германии, но сейчас живу в Швеции.", "answer": ["Jag kommer från Tyskland, men nu bor jag i Sverige.", "Jag kommer från Tyskland, men jag bor i Sverige nu.", "Jag är från Tyskland, men nu bor jag i Sverige.", "Jag är från Tyskland, men jag bor i Sverige nu."], "note": "Германия — Tyskland. Если после men начать с nu, глагол всё равно второй: nu bor jag (не «nu jag bor»)."},
+        {"label": "6", "type": "write", "rows": 3, "prompt": "Откуда ты родом? Я родом из Братиславы. Где находится Братислава? Братислава находится в Словакии.", "answer": ["Varifrån kommer du? Jag kommer från Bratislava. Var ligger Bratislava? Bratislava ligger i Slovakien.", "Var kommer du ifrån? Jag kommer från Bratislava. Var ligger Bratislava? Bratislava ligger i Slovakien."], "note": "Varifrån kommer du? = Var kommer du ifrån? Словакия — Slovakien."},
+        {"label": "7", "type": "write", "rows": 2, "prompt": "Мой друг болен, и сегодня он дома.", "answer": ["Min vän är sjuk, och i dag är han hemma.", "Min vän är sjuk, och han är hemma i dag.", "Min kompis är sjuk, och i dag är han hemma.", "Min kompis är sjuk, och han är hemma i dag."], "note": "Если начать с i dag, глагол второй: i dag är han hemma."},
+        {"label": "8", "type": "write", "rows": 2, "prompt": "Я не понимаю официанта. Он говорит по-шведски.", "answer": ["Jag förstår inte servitören. Han pratar svenska.", "Jag förstår inte servitören. Han talar svenska."], "note": "servitören — «этот официант» (определённая форма). «Говорит по-шведски» = pratar/talar svenska, без предлога."},
+        {"label": "9", "type": "write", "rows": 3, "prompt": "Где ты учишься? Я учусь в университете. Ты учишься с Томасом? Нет, Томас учится в школе.", "answer": ["Var pluggar du? Jag pluggar på universitetet. Pluggar du med Tomas? Nej, Tomas går i skolan.", "Var studerar du? Jag studerar på universitetet. Studerar du med Tomas? Nej, Tomas går i skolan.", "Var pluggar du? Jag pluggar på universitetet. Pluggar du med Thomas? Nej, Thomas går i skolan."], "note": "på universitetet, но i skolan. «Учится в школе» обычно говорят går i skolan (ходит в школу)."},
+        {"label": "10", "type": "write", "rows": 3, "prompt": "Кто она по профессии? Она врач, но также учится на программиста.", "answer": ["Vad jobbar hon med? Hon är läkare, men hon pluggar också till programmerare.", "Vad jobbar hon med? Hon är läkare, men pluggar också till programmerare.", "Vad har hon för yrke? Hon är läkare, men hon pluggar också till programmerare."], "note": "Профессия без артикля: hon är läkare. Учиться на кого-то = plugga till. också — после глагола."}
+      ]
+    }
+  ]
+}
