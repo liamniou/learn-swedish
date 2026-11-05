@@ -1,6 +1,6 @@
 # Adding a new homework lesson
 
-The user sends homework (links, PDFs, screenshots) about twice a week. Each homework becomes **one lesson folder**.
+The user sends homework (links, PDFs, screenshots) about twice a week. Each homework becomes **one lesson folder**. Every new message with homework material is a new lesson, even if it's on the same day or topic as the previous one. Never add new material to an existing lesson unless the user explicitly asks.
 
 1. Create `lessons/NN-slug/` (next number, short Swedish slug, e.g. `02-familj`).
 2. Add `lesson.json` (format below) and, if there's theory, a `notes.html` fragment.
